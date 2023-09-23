@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="850"
+			 MinWidth="1200" MinHeight="850"
+             x:Class="OcrSyntheticDataGenerator.Views.MainView"
+             x:DataType="vm:MainViewModel" >
+	<Design.DataContext>
+		<!-- This only sets the DataContext for the previewer in an IDE, to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+		<vm:MainViewModel />
+	</Design.DataContext>
+
+	
+	<Grid>
+		<DockPanel LastChildFill="False" >
+			
+			<StackPanel DockPanel.Dock="Left" Width="220" Margin="5">
+				<Label Content="Random content" FontWeight="Bold" Padding="0 10"/>
+				
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+					<TextBlock Text="Background noise probability: " FontSize="12"/>
+					<TextBlock Text="{Binding BackgroundProbability}" Width="20" FontSize="12"/>
+					<TextBlock Text="%" FontSize="12"/>
+				</StackPanel>
+				<Slider x:Name="BackgroundSlider" Value="{Binding BackgroundProbability}" Maximum="100" Width="200"/>
+
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+					<TextBlock Text="Salt-n-pepper probability: " FontSize="12"/>
+					<TextBlock Text="{Binding NoiseProbability}" Width="20" FontSize="12"/>
+					<TextBlock Text="%" FontSize="12"/>
+				</StackPanel>
+				<Slider x:Name="NoiseSlider" Value="{Binding NoiseProbability}" Maximum="100" Width="200"/>
+
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
+					<TextBlock Text="Lines probability: " FontSize="12" />
+					<TextBlock Text="{Binding LinesProbability}" Width="20" FontSize="12"/>
+					<TextBlock Text="%" FontSize="12"/>
+				</StackPanel>
+				<Slider x:Name="LinesSlider" Value="{Binding LinesProbability}" Maximum="100" Width="200"/>
+
+				<Separator Margin="1 10"/>
+				
+				<Label Content="PostProcessing" FontWeight="Bold" Padding="0 10"/>
+				
+
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
+					<TextBlock Text="Blur probability: " FontSize="12" />
+					<TextBlock Text="{Binding BlurProbability}" Width="20" FontSize="12"/>
+					<TextBlock Text="%" FontSize="12"/>
+				</StackPanel>
+				<Slider x:Name="BlurSlider" Value="{Binding BlurProbability}" Maximum="100" Width="200"/>
+
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
+					<TextBlock Text="Pixelate probability: " FontSize="12" />
+					<TextBlock Text="{Binding PixelateProbability}" Width="20" FontSize="12"/>
+					<TextBlock Text="%" FontSize="12"/>
+				</StackPanel>
+				<Slider x:Name="Pixelatelider" Value="{Binding PixelateProbability}" Maximum="100" Width="200"/>
+				
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
+					<TextBlock Text="Invert probability: " FontSize="12" />
+					<TextBlock Text="{Binding InvertImageProbability}" Width="20" FontSize="12"/>
+					<TextBlock Text="%" FontSize="12"/>
+				</StackPanel>
+				<Slider x:Name="InvertImageSlider" Value="{Binding InvertImageProbability}" Maximum="100" Width="200"/>
+
+
+
+
+				<Separator Margin="1 10"/>
+				
+				<Button Name="PreviewButton" Margin="5" IsEnabled="True" Command="{Binding PreviewButton_ClickCommand}">Preview</Button>
+
+				<Label Content="Genrate Files" FontWeight="Bold" Padding="0 10"/>
+				<Label Content="Number of images:"/>
+				<NumericUpDown x:Name="NumberOfImagesInputBox" Value="{Binding NumberOfFilesToGenerate}" Increment="100" FormatString="0" />
+
+				<!--<Button Margin="0 5">Set output directory</Button>-->
+				<Label Content="Output directory:" Margin="0 5"/>
+				<TextBox Text="{Binding OutputDirectory}" TextWrapping="Wrap"/>
+				<Button x:Name="GenerateFilesButton" Margin="0 5" IsEnabled="True" Command="{Binding GenerateFilesButton_ClickCommand}">Create Image Files</Button>
+
+			</StackPanel>
+			<Grid ColumnDefinitions="1*, 1*" RowDefinitions="Auto" Margin="4">
+				<Border  BorderBrush="#222" BorderThickness="1" CornerRadius="5" Padding="4" Grid.Row="0" Grid.Column="0" Margin="5">
+					<Image 
+						x:Name="LeftImage"  
+						MinWidth="700" 
+						MinHeight="800" 
+						Source="{Binding LeftBitmap}" 
+						Stretch="None"
+						/>
+				</Border>
+				<Border BorderBrush="#222" BorderThickness="1" CornerRadius="5" Padding="4" Grid.Row="0" Grid.Column="1" Margin="5">
+					<Image 
+						Name="RightImage"  
+						MinWidth="700" 
+						MinHeight="800"
+						Source="{Binding RightBitmap}"
+						Stretch="None"
+						/>
+				</Border>
+
+			</Grid>
+		</DockPanel>
+
+	</Grid>
+</UserControl>
