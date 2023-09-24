@@ -7,6 +7,7 @@ using SkiaSharp;
 using OcrSyntheticDataGenerator.ImageGeneration;
 using System;
 using System.IO;
+using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGenerator;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
 
@@ -149,26 +150,34 @@ public class MainViewModel : ViewModelBase
             generator.InvertProbability = InvertImageProbability;
             generator.GenerateImages();
 
-            string dataFilename = $"{imageAndLabelsGuid}.png";
+            string imageFilename = $"{imageAndLabelsGuid}.png";
             string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
-            var dataDirectoryPath = System.IO.Path.Combine(OutputDirectory, "images");
-            var labelsDirectoryPath = System.IO.Path.Combine(OutputDirectory, "labels");
+            string bboxDataFilenameWithoutExtension = $"{imageAndLabelsGuid}";
+            var imagesDirectoryPath = Path.Combine(OutputDirectory, "images");
+            var labelsDirectoryPath = Path.Combine(OutputDirectory, "labels");
+            var bboxDataDirectoryPath = Path.Combine(OutputDirectory, "bounding_boxes");
 
 
-            if (!Directory.Exists(dataDirectoryPath))
+            if (!Directory.Exists(imagesDirectoryPath))
             {
-                Directory.CreateDirectory(dataDirectoryPath);
+                Directory.CreateDirectory(imagesDirectoryPath);
             }
             if (!Directory.Exists(labelsDirectoryPath))
             {
                 Directory.CreateDirectory(labelsDirectoryPath);
             }
+            if (!Directory.Exists(bboxDataDirectoryPath))
+            {
+                Directory.CreateDirectory(bboxDataDirectoryPath);
+            }
 
-            string dataFileSavePath = System.IO.Path.Combine(dataDirectoryPath, dataFilename);
-            string labelsFileSavePath = System.IO.Path.Combine(labelsDirectoryPath, labelsFilename);
+            string imageFileSavePath = Path.Combine(imagesDirectoryPath, imageFilename);
+            string labelsFileSavePath = Path.Combine(labelsDirectoryPath, labelsFilename);
+            string bboxFileSavePath = Path.Combine(bboxDataDirectoryPath, bboxDataFilenameWithoutExtension);
 
-            generator.SaveTextImage(dataFileSavePath, SKEncodedImageFormat.Png);
+            generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
             generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
+            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, DataFileType.CsvWordsAndCharacters);
 
         }
 

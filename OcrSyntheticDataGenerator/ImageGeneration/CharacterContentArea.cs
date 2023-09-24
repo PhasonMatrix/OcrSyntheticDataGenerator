@@ -9,5 +9,13 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
     internal class CharacterContentArea : ContentArea
     {
         public char Symbol { get; set; }
+
+        public CharacterContentArea Clone()
+        {
+            CharacterContentArea clone = new CharacterContentArea();
+            clone.Symbol = Symbol;
+            clone.Rect = new SkiaSharp.SKRectI(Rect.Left, Rect.Top, Rect.Right, Rect.Bottom);
+            return clone;
+        }
     }
 }

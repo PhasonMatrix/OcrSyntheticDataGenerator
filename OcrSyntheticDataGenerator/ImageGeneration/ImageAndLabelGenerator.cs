@@ -4,12 +4,24 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace OcrSyntheticDataGenerator.ImageGeneration
 {
     internal class ImageAndLabelGenerator
     {
+        public enum DataFileType
+        {
+            CsvCharactersOnly,
+            CsvWordsOnly,
+            CsvWordsAndCharacters,
+            JsonCharactersOnly,
+            JsonWordsOnly,
+            JsonWordsAndCharacters,
+        };
+
+
         private int _imageWidth;
         private int _imageHeight;
         RandomTextGenerator _randomTextGenerator = new RandomTextGenerator();
@@ -20,7 +32,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         public SKBitmap LabelImage { get; set; }
         public SKBitmap HeatMapImage { get; set; }
         public SKBitmap CharacterBoxImage { get; set; }
-
 
 
         public int LinesProbability { get; set; }
@@ -58,7 +69,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             using (SKCanvas characterBoxCanvas = new SKCanvas(CharacterBoxImage))
             {
                 
-
                 // draw image backgrounds
                 textCanvas.Clear(SKColors.White);
                 labelCanvas.Clear(SKColors.Black);
@@ -246,7 +256,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                         continue; // we couldn't fit this on the image
                     }
 
-                    // check we haven't overlapped another peice of text
+                    // check we haven't overlapped another piece of text
                     bool overlapsWithSomething = false;
                     foreach (var area in _contentAreas)
                     {
@@ -402,7 +412,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
 
 
-                    // draw data on the other images. bounding boxes, labels, heatmap etc.
+                    // draw data on the other images. bounding boxes, labels, heatmap, etc.
 
 
                     // Character Box Image - draw text
@@ -436,7 +446,10 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     }
 
 
+                    List<WordContentArea> words = CreateWordAndCharacterObjects(text, croppedCharacterBoxes);
+                    currentTextContentArea.Words = words;
                     _contentAreas.Add(currentTextContentArea);
+
                     i++;
                 }
 
@@ -556,6 +569,67 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
         }
 
+
+
+        private List<WordContentArea> CreateWordAndCharacterObjects(string text, SKRect[] characterBoxes)
+        {
+
+            List<WordContentArea> words = new List<WordContentArea>();
+
+            WordContentArea word = new WordContentArea();
+
+
+            for (int c = 0; c < characterBoxes.Length; c++)
+            {
+                SKRect currentCharBox = characterBoxes[c];
+                char currentSymbol = text[c];
+
+                CharacterContentArea character = new CharacterContentArea();
+                character.Symbol = currentSymbol;
+
+                if (c == 0) // first character
+                {
+                    character.Rect = RectToRectI(currentCharBox);
+                    word = new WordContentArea();
+                    word.Rect = RectToRectI(currentCharBox);
+                }
+                else if (currentSymbol == ' ') // space between words
+                {
+                    WordContentArea wordCopy = word.Clone();
+                    words.Add(wordCopy);
+                    word = new WordContentArea();
+                }
+
+
+                if (currentSymbol != ' ')
+                {
+                    character.Rect = RectToRectI(currentCharBox);
+                    word.Characters.Add(character);
+                    if (string.IsNullOrEmpty(word.Text))
+                    {
+                        word.Rect = RectToRectI(currentCharBox);
+                    }
+                    else
+                    {
+                        word.Rect = GrowRectToEngulfNewRect(word.Rect, RectToRectI(currentCharBox));
+                    }
+                    word.Text += currentSymbol;
+                }
+            }
+
+            words.Add(word);
+            return words;
+        }
+
+
+        private SKRectI GrowRectToEngulfNewRect(SKRectI existingRect, SKRectI newRect)
+        {
+            if (newRect.Left < existingRect.Left) { existingRect.Left = newRect.Left; }
+            if (newRect.Top < existingRect.Top) { existingRect.Top = newRect.Top; }
+            if (newRect.Right > existingRect.Right) { existingRect.Right = newRect.Right; }
+            if (newRect.Bottom > existingRect.Bottom) {  existingRect.Bottom = newRect.Bottom; }
+            return existingRect;
+        }
 
 
         private void DrawCharacterProbabilityLabels(SKRect charRect, SKCanvas labelCanvas)
@@ -762,6 +836,136 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 // save the data to a stream
                 data.SaveTo(fileStream);
             }
+        }
+
+
+        public void SaveBoudingBoxesToTextFile(string path, DataFileType dataFileType)
+        {
+
+            switch(dataFileType)
+            {
+                case DataFileType.CsvCharactersOnly:
+                    SaveToCsvFile(path, true, false);
+                    break;
+
+                case DataFileType.CsvWordsOnly:
+                    SaveToCsvFile(path, false, true);
+                    break;
+
+                case DataFileType.CsvWordsAndCharacters:
+                    SaveToCsvFile(path, true, true);
+                    break;
+
+                case DataFileType.JsonCharactersOnly:
+                    throw new NotImplementedException();
+                    break;
+
+                case DataFileType.JsonWordsOnly:
+                    throw new NotImplementedException();
+                    break;
+
+                case DataFileType.JsonWordsAndCharacters:
+                    throw new NotImplementedException();
+                    break;
+
+
+                default: break;
+
+            }
+
+        }
+
+        private void SaveToCsvFile(string path, bool writeCharacters, bool writeWords)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine("type,text,left,top,right,bottom,width,height,x_center,y_center");
+
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+
+                if (contentArea is TextContentArea)
+                {
+                    TextContentArea textContentArea = (TextContentArea)contentArea;
+
+                    foreach (WordContentArea word in textContentArea.Words)
+                    {
+                        if (writeWords)
+                        {
+                            if (word.Text.Contains(',')) // escape values containing comma
+                            {
+                                // Escaping conmvention supported by MS Excel.
+                                // Values containing commas are wrapped in double quotes ('12,345.00' -> '"12,345.00"').
+                                // Double quotes in values are escaped as two double quotes ('"' -> '""').
+
+
+                                // yeah yeah, I know, the following two lines go against the use of StringBuilder but this won't be every word.
+                                word.Text.Replace("\"", "\"\"");
+                                word.Text = $"\"{word.Text}\"";
+                            }
+                            stringBuilder.Append("word,");
+                            stringBuilder.Append(word.Text);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.Left);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.Top);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.Right);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.Bottom);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.Width);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.Height);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.MidX);
+                            stringBuilder.Append(",");
+                            stringBuilder.Append(word.Rect.MidY);
+                            stringBuilder.Append(Environment.NewLine);
+                        }
+
+                        if (writeCharacters)
+                        {
+                            foreach (CharacterContentArea character in word.Characters)
+                            {
+                                string symbol = character.Symbol.ToString();
+                                if (character.Symbol == ',')
+                                {
+                                    symbol = "\",\"";
+                                }
+                                if (character.Symbol == '"')
+                                {
+                                    symbol = "\"\"";
+                                }
+
+                                stringBuilder.Append("character,");
+                                stringBuilder.Append(symbol);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.Left);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.Top);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.Right);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.Bottom);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.Width);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.Height);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.MidX);
+                                stringBuilder.Append(",");
+                                stringBuilder.Append(character.Rect.MidY);
+                                stringBuilder.Append(Environment.NewLine);
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            File.AppendAllText(path + ".csv", stringBuilder.ToString());
+
+
         }
 
 
