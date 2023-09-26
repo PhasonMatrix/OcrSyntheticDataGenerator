@@ -4,7 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace OcrSyntheticDataGenerator.ImageGeneration
@@ -857,19 +860,19 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     break;
 
                 case DataFileType.JsonCharactersOnly:
-                    throw new NotImplementedException();
+                    SaveToJsonFile(path, true, false);
                     break;
 
                 case DataFileType.JsonWordsOnly:
-                    throw new NotImplementedException();
+                    SaveToJsonFile(path, false, true);
                     break;
 
                 case DataFileType.JsonWordsAndCharacters:
-                    throw new NotImplementedException();
+                    SaveToJsonFile(path, true, true);
                     break;
 
-
-                default: break;
+                default:
+                    throw new NotImplementedException("No save method implmented for this option");
 
             }
 
@@ -962,13 +965,61 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 }
             }
 
-
             File.AppendAllText(path + ".csv", stringBuilder.ToString());
-
 
         }
 
 
+
+        private void SaveToJsonFile(string path, bool writeCharacters, bool writeWords)
+        {
+            List<WordContentArea> wordsForExport = new List<WordContentArea>();
+
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+                if (contentArea is TextContentArea)
+                {
+                    TextContentArea textContentArea = (TextContentArea)contentArea;
+                    foreach (WordContentArea word in textContentArea.Words)
+                    {
+                        wordsForExport.Add(word);
+                    }
+                }
+            }
+
+
+            JsonSerializerOptions options = new()
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
+
+            if (writeCharacters && writeWords)
+            {
+                string jsonString = JsonSerializer.Serialize(wordsForExport, options);
+                File.AppendAllText(path + ".json", jsonString);
+            }
+            else if (writeWords)
+            {
+                wordsForExport.ForEach(word => word.Characters = null);
+                string jsonString = JsonSerializer.Serialize(wordsForExport, options);
+                File.AppendAllText(path + ".json", jsonString);
+
+            }
+            else if (writeCharacters)
+            {
+                var charactersForExport = wordsForExport.SelectMany(word => word.Characters).ToList();
+                string jsonString = JsonSerializer.Serialize(charactersForExport, options);
+                File.AppendAllText(path + ".json", jsonString);
+
+            }
+            else
+            {
+                // export noting
+            }
+
+        }
 
 
     }

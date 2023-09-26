@@ -16,7 +16,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         {
             string word;
 
-            if (_random.Next(0, 10) > 5)
+            if (_random.Next(0, 10) > 2)
             {
                 word = GetRandomEnglishWord();
             }

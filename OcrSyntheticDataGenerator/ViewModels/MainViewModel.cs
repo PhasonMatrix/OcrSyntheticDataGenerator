@@ -177,7 +177,7 @@ public class MainViewModel : ViewModelBase
 
             generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
             generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
-            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, DataFileType.CsvWordsAndCharacters);
+            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, DataFileType.JsonWordsAndCharacters);
 
         }
 
