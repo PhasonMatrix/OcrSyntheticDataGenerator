@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="350"
+		Width="600" Height="350"
+        x:Class="OcrSyntheticDataGenerator.Views.CreateFilesDialog"
+		x:DataType="vm:CreateFilesViewModel"
+        Title="Create Files" >
+
+	<Design.DataContext>
+		<vm:CreateFilesViewModel />
+	</Design.DataContext>
+
+	<StackPanel Width="500" HorizontalAlignment="Center">
+		<!--<TextBlock> Probability settings from the main window are used when generating files.</TextBlock>-->
+		<Label Content="Number of images:" Margin="0 15"/>
+		<NumericUpDown x:Name="NumberOfImagesInputBox"
+					   Value="{Binding NumberOfFilesToGenerate}"
+					   Increment="100"
+					   FormatString="0"
+					   Width="200"
+					   HorizontalAlignment="Left"/>
+
+		<!--<Button Margin="0 5">Set output directory</Button>-->
+		<Label Content="Output directory:" Margin="0 15"/>
+		<TextBox Text="{Binding OutputDirectory}" TextWrapping="Wrap" HorizontalAlignment="Left" Width="500"/>
+		<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+			<Button x:Name="CancelButton" Margin="10 25" IsEnabled="True" Click="CloseButtonClick"  HorizontalContentAlignment="Center" Width="130">Cancel</Button>
+			<Button x:Name="GenerateFilesButton" Margin="10 25" IsEnabled="True" Command="{Binding GenerateFilesButton_ClickCommand}" HorizontalContentAlignment="Center" Width="130">Generate Files</Button>
+		</StackPanel>
+	</StackPanel>
+
+</Window>

@@ -23,6 +23,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Views\CreateFilesDialog.axaml.cs">
+      <DependentUpon>CreateFilesDialog.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="BackgroundImages\Background noise 1.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -71,16 +71,9 @@
 
 				<Separator Margin="1 10"/>
 				
-				<Button Name="PreviewButton" Margin="5" IsEnabled="True" Command="{Binding PreviewButton_ClickCommand}">Preview</Button>
+				<Button Name="PreviewButton" Margin="5 14" IsEnabled="True" Command="{Binding PreviewButton_ClickCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">Preview</Button>
 
-				<Label Content="Genrate Files" FontWeight="Bold" Padding="0 10"/>
-				<Label Content="Number of images:"/>
-				<NumericUpDown x:Name="NumberOfImagesInputBox" Value="{Binding NumberOfFilesToGenerate}" Increment="100" FormatString="0" />
-
-				<!--<Button Margin="0 5">Set output directory</Button>-->
-				<Label Content="Output directory:" Margin="0 5"/>
-				<TextBox Text="{Binding OutputDirectory}" TextWrapping="Wrap"/>
-				<Button x:Name="GenerateFilesButton" Margin="0 5" IsEnabled="True" Command="{Binding GenerateFilesButton_ClickCommand}">Create Image Files</Button>
+				<Button x:Name="GenerateFilesButton" Margin="5 14" IsEnabled="True" Command="{Binding GenerateFilesButton_ClickCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">Generate Files</Button>
 
 			</StackPanel>
 			<Grid ColumnDefinitions="1*, 1*" RowDefinitions="Auto" Margin="4">
