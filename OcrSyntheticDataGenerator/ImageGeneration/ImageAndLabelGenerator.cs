@@ -2,6 +2,7 @@
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,16 +13,17 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace OcrSyntheticDataGenerator.ImageGeneration
 {
-    internal class ImageAndLabelGenerator
+    public class ImageAndLabelGenerator
     {
         public enum DataFileType
         {
-            CsvCharactersOnly,
-            CsvWordsOnly,
-            CsvWordsAndCharacters,
-            JsonCharactersOnly,
-            JsonWordsOnly,
-            JsonWordsAndCharacters,
+            [Description("None")] None,
+            [Description("CSV characters only")] CsvCharactersOnly,
+            [Description("CSV words only")] CsvWordsOnly,
+            [Description("CSV words and characters")] CsvWordsAndCharacters,
+            [Description("JSON characters only")] JsonCharactersOnly,
+            [Description("JSON words only")] JsonWordsOnly,
+            [Description("JSON words and characters")] JsonWordsAndCharacters,
         };
 
 
@@ -847,6 +849,9 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
             switch(dataFileType)
             {
+                case DataFileType.None:
+                    break; // do nothing
+
                 case DataFileType.CsvCharactersOnly:
                     SaveToCsvFile(path, true, false);
                     break;
@@ -886,9 +891,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             foreach (ContentArea contentArea in _contentAreas)
             {
 
-                if (contentArea is TextContentArea)
+                if (contentArea is TextContentArea textContentArea)
                 {
-                    TextContentArea textContentArea = (TextContentArea)contentArea;
 
                     foreach (WordContentArea word in textContentArea.Words)
                     {
@@ -977,9 +981,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
             foreach (ContentArea contentArea in _contentAreas)
             {
-                if (contentArea is TextContentArea)
+                if (contentArea is TextContentArea textContentArea)
                 {
-                    TextContentArea textContentArea = (TextContentArea)contentArea;
                     foreach (WordContentArea word in textContentArea.Words)
                     {
                         wordsForExport.Add(word);

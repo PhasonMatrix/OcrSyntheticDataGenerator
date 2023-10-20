@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGenerator;
 
@@ -21,6 +22,7 @@ public class CreateFilesViewModel: ViewModelBase
     private int _blurProbability;
     private int _pixelateProbability;
     private int _invertImageProbability;
+    private string _comboBoxSaveDataFileType = "None";
 
 
     private int _numberOfFilesToGenerate = 1000;
@@ -40,6 +42,11 @@ public class CreateFilesViewModel: ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _outputDirectory, value);
     }
 
+    public string ComboBoxSaveDataFileType
+    {
+        get => _comboBoxSaveDataFileType;
+        private set => this.RaiseAndSetIfChanged(ref _comboBoxSaveDataFileType, value);
+    }
 
     public Cursor PointerCursor
     {
@@ -48,6 +55,8 @@ public class CreateFilesViewModel: ViewModelBase
     }
 
 
+    public CreateFilesViewModel() // parameterless ctor for designer
+    {}
 
     public CreateFilesViewModel(
         int linesProbability,
@@ -76,6 +85,18 @@ public class CreateFilesViewModel: ViewModelBase
         }
 
         SetMouseCursorToWaiting();
+
+
+        DataFileType comboBoxSelection = DataFileType.None;
+        foreach(DataFileType value in Enum.GetValues(typeof(DataFileType)))
+        {
+            if (_comboBoxSaveDataFileType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
+            {
+                comboBoxSelection = value;
+                break;
+            }
+        }
+
 
         for (int i = 0; i < _numberOfFilesToGenerate; i++)
         {
@@ -117,7 +138,7 @@ public class CreateFilesViewModel: ViewModelBase
 
             generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
             generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
-            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, DataFileType.JsonWordsAndCharacters);
+            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, comboBoxSelection);
 
         }
 
