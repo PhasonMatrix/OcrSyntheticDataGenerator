@@ -681,7 +681,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             SKBitmap stampBitmap = GetSingleCharacterHeatMapImage();
             using (SKPaint paint = new SKPaint())
             {
-                paint.Color = paint.Color.WithAlpha(0x90);
+                paint.Color = paint.Color.WithAlpha(0xA0);
                 labelCanvas.DrawBitmap(stampBitmap, charRect, paint);
             }
                 

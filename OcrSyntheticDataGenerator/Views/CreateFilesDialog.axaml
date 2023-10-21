@@ -4,11 +4,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
 		xmlns:ig="clr-namespace:OcrSyntheticDataGenerator.ImageGeneration"
-        mc:Ignorable="d" d:DesignWidth="580" d:DesignHeight="410"
-		Width="580" Height="410"
+        mc:Ignorable="d" d:DesignWidth="580" d:DesignHeight="510"
+		Width="580" Height="510"
         x:Class="OcrSyntheticDataGenerator.Views.CreateFilesDialog"
 		x:DataType="vm:CreateFilesViewModel"
-        Title="Create Files" >
+        Title="Create Files" 
+		Cursor="{Binding PointerCursor}">
 
 	<Design.DataContext>
 		<vm:CreateFilesViewModel />
@@ -32,15 +33,18 @@
 				  SelectedItem="{Binding ComboBoxSaveDataFileType}" 
 				  Width="200" Margin="0 15" >
 		</ComboBox>
-		
 
 		<Label Content="Output directory:" Margin="0 15 0 0"/>
 		<TextBox Text="{Binding OutputDirectory}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="0 15" Width="500"/>
 		
 		<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
-			<Button x:Name="CancelButton" Margin="10 25" IsEnabled="True" Click="CloseButtonClick"  HorizontalContentAlignment="Center" Width="130">Cancel</Button>
-			<Button x:Name="GenerateFilesButton" Margin="10 25" IsEnabled="True" Command="{Binding GenerateFilesButton_ClickCommand}" HorizontalContentAlignment="Center" Width="130">Generate Files</Button>
+			<Button x:Name="GenerateFilesButton" Margin="10 25" IsEnabled="{Binding !IsRunning}" Command="{Binding GenerateFilesButton_ClickCommand}" HorizontalContentAlignment="Center" Width="130">Generate Files</Button>
+			<Button x:Name="CancelButton" Margin="10 25" IsEnabled="{Binding IsRunning}" Command="{Binding CancelButton_ClickCommand}" HorizontalContentAlignment="Center" Width="130">Cancel</Button>
+			<Button x:Name="CloseButton" Margin="10 25" IsEnabled="True" Click="CloseButtonClick" HorizontalContentAlignment="Center" Width="130">Close</Button>
 		</StackPanel>
+		
+		<ProgressBar Value="{Binding ProgressBarValue}" Minimum="0" Maximum="100" Height="20" Margin="0 10" Foreground="Green"/>
+		<TextBlock Text="{Binding StatusMessage}" FontSize="12" FontStyle="Italic" FontFamily="monospace"/>
 	</StackPanel>
 
 </Window>

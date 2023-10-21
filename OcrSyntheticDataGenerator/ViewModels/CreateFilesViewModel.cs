@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGenerator;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
@@ -23,12 +24,13 @@ public class CreateFilesViewModel: ViewModelBase
     private int _pixelateProbability;
     private int _invertImageProbability;
     private string _comboBoxSaveDataFileType = "None";
-
-
+    private double _progressBarValue;
+    private string _status;
+    private bool _isRunning;
     private int _numberOfFilesToGenerate = 1000;
     private string _outputDirectory = "C:\\OCR Source Images\\Generated Images and Labels\\";
 
-    private Cursor _pointerCursor = new Cursor(StandardCursorType.Help);
+    private Cursor _pointerCursor = Cursor.Default;
 
     public int NumberOfFilesToGenerate
     {
@@ -53,6 +55,25 @@ public class CreateFilesViewModel: ViewModelBase
         get => _pointerCursor;
         private set => this.RaiseAndSetIfChanged(ref _pointerCursor, value);
     }
+
+    public double ProgressBarValue
+    {
+        get => _progressBarValue;
+        private set => this.RaiseAndSetIfChanged(ref _progressBarValue, value);
+    }
+
+    public string StatusMessage 
+    {
+        get { return _status;  }
+        private set { this.RaiseAndSetIfChanged(ref _status, value); } 
+    }
+
+    public bool IsRunning
+    {
+        get { return _isRunning; }
+        private set { this.RaiseAndSetIfChanged(ref _isRunning, value); }
+    }
+
 
 
     public CreateFilesViewModel() // parameterless ctor for designer
@@ -84,8 +105,8 @@ public class CreateFilesViewModel: ViewModelBase
             return;
         }
 
+        IsRunning = true;
         SetMouseCursorToWaiting();
-
 
         DataFileType comboBoxSelection = DataFileType.None;
         foreach(DataFileType value in Enum.GetValues(typeof(DataFileType)))
@@ -97,52 +118,78 @@ public class CreateFilesViewModel: ViewModelBase
             }
         }
 
-
-        for (int i = 0; i < _numberOfFilesToGenerate; i++)
+        int total = _numberOfFilesToGenerate; // make a copy in case the user changes number in UI control while we're running the loop.
+        int i = 0;
+        for (; i < total; i++)
         {
-            var imageAndLabelsGuid = Guid.NewGuid();
-            // create a new generator object each time
-            ImageAndLabelGenerator generator = new ImageAndLabelGenerator(650, 800);
-            generator.BackgroundProbability = _backgroundProbability;
-            generator.LinesProbability = _linesProbability;
-            generator.NoiseProbability = _noiseProbability;
-            generator.BlurProbability = _blurProbability;
-            generator.PixelateProbability = _pixelateProbability;
-            generator.InvertProbability = _invertImageProbability;
-            generator.GenerateImages();
-
-            string imageFilename = $"{imageAndLabelsGuid}.png";
-            string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
-            string bboxDataFilenameWithoutExtension = $"{imageAndLabelsGuid}";
-            var imagesDirectoryPath = Path.Combine(OutputDirectory, "images");
-            var labelsDirectoryPath = Path.Combine(OutputDirectory, "labels");
-            var bboxDataDirectoryPath = Path.Combine(OutputDirectory, "bounding_boxes");
-
-
-            if (!Directory.Exists(imagesDirectoryPath))
+            if (!IsRunning) // user can cancel while loop is running.
             {
-                Directory.CreateDirectory(imagesDirectoryPath);
+                break;
             }
-            if (!Directory.Exists(labelsDirectoryPath))
-            {
-                Directory.CreateDirectory(labelsDirectoryPath);
-            }
-            if (!Directory.Exists(bboxDataDirectoryPath))
-            {
-                Directory.CreateDirectory(bboxDataDirectoryPath);
-            }
-
-            string imageFileSavePath = Path.Combine(imagesDirectoryPath, imageFilename);
-            string labelsFileSavePath = Path.Combine(labelsDirectoryPath, labelsFilename);
-            string bboxFileSavePath = Path.Combine(bboxDataDirectoryPath, bboxDataFilenameWithoutExtension);
-
-            generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
-            generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
-            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, comboBoxSelection);
-
+            ProgressBarValue = (double)i / total * 100.0;
+            StatusMessage = $"Status: Generating {i} of {total} files ...";
+            await Task.Run(() => GenerateFiles(comboBoxSelection));
         }
 
+        if (i == total) // we reached the end without user cancelling
+        {
+            ProgressBarValue = 100;
+            StatusMessage = "Status: Done";
+        }
         SetMouseCursorToDefault();
+        IsRunning = false;
+    }
+
+
+    public async void CancelButton_ClickCommand()
+    {
+        IsRunning = false;
+        ProgressBarValue = 0;
+        StatusMessage = "Status: Cancelled";
+    }
+
+
+    private void GenerateFiles(DataFileType dataFileType)
+    {
+        var imageAndLabelsGuid = Guid.NewGuid();
+        // create a new generator object each time
+        ImageAndLabelGenerator generator = new ImageAndLabelGenerator(650, 800);
+        generator.BackgroundProbability = _backgroundProbability;
+        generator.LinesProbability = _linesProbability;
+        generator.NoiseProbability = _noiseProbability;
+        generator.BlurProbability = _blurProbability;
+        generator.PixelateProbability = _pixelateProbability;
+        generator.InvertProbability = _invertImageProbability;
+        generator.GenerateImages();
+
+        string imageFilename = $"{imageAndLabelsGuid}.png";
+        string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
+        string bboxDataFilenameWithoutExtension = $"{imageAndLabelsGuid}";
+        var imagesDirectoryPath = Path.Combine(OutputDirectory, "images");
+        var labelsDirectoryPath = Path.Combine(OutputDirectory, "labels");
+        var bboxDataDirectoryPath = Path.Combine(OutputDirectory, "bounding_boxes");
+
+
+        if (!Directory.Exists(imagesDirectoryPath))
+        {
+            Directory.CreateDirectory(imagesDirectoryPath);
+        }
+        if (!Directory.Exists(labelsDirectoryPath))
+        {
+            Directory.CreateDirectory(labelsDirectoryPath);
+        }
+        if (!Directory.Exists(bboxDataDirectoryPath))
+        {
+            Directory.CreateDirectory(bboxDataDirectoryPath);
+        }
+
+        string imageFileSavePath = Path.Combine(imagesDirectoryPath, imageFilename);
+        string labelsFileSavePath = Path.Combine(labelsDirectoryPath, labelsFilename);
+        string bboxFileSavePath = Path.Combine(bboxDataDirectoryPath, bboxDataFilenameWithoutExtension);
+
+        generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
+        generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
+        generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, dataFileType);
     }
 
 
