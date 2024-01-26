@@ -6,7 +6,7 @@ using SkiaSharp;
 
 namespace OcrSyntheticDataGenerator.ImageGeneration
 {
-    internal class RandomTextGenerator
+    public class RandomTextGenerator
     {
 
         private Random _random = new Random();

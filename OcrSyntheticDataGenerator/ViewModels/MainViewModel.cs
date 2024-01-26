@@ -7,7 +7,7 @@ using SkiaSharp;
 using OcrSyntheticDataGenerator.ImageGeneration;
 using System;
 using System.IO;
-using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGenerator;
+using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGeneratorBase;
 using OcrSyntheticDataGenerator.Views;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
@@ -89,7 +89,7 @@ public class MainViewModel : ViewModelBase
     {
         SetMouseCursorToWaiting();
 
-        ImageAndLabelGenerator generator = new ImageAndLabelGenerator(650, 800);
+        ImageAndLabelGeneratorBase generator = new ScatteredTextGenerator(650, 800);
         generator.BackgroundProbability = BackgroundProbability;
         generator.LinesProbability = LinesProbability;
         generator.NoiseProbability = NoiseProbability;
@@ -97,7 +97,7 @@ public class MainViewModel : ViewModelBase
         generator.PixelateProbability = PixelateProbability;
         generator.InvertProbability = InvertImageProbability;
 
-        generator.GenerateScatteredTextImages();
+        generator.Generate();
 
         LeftBitmap = SKBitmapToAvaloniaBitmap(generator.TextImage);
         RightBitmap = SKBitmapToAvaloniaBitmap(generator.HeatMapImage);

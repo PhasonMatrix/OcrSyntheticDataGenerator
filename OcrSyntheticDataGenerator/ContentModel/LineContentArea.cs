@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OcrSyntheticDataGenerator.ImageGeneration
+namespace OcrSyntheticDataGenerator.ContentModel
 {
-    internal class LineContentArea : ContentArea
+    public class LineContentArea : ContentArea
     {
     }
 }

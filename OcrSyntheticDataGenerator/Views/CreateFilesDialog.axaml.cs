@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGenerator;
+using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGeneratorBase;
 
 namespace OcrSyntheticDataGenerator.Views;
 

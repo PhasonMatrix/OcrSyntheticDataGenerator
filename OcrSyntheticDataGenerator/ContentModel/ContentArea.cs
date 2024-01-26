@@ -6,15 +6,15 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace OcrSyntheticDataGenerator.ImageGeneration
+namespace OcrSyntheticDataGenerator.ContentModel
 {
-    internal class ContentArea
+    public class ContentArea
     {
         [JsonIgnore]
         public SKRectI Rect { get; set; } // SKRectI for integer rectangle. SKRect for float rectangle.
 
         [JsonPropertyName("Rect")]
-        public SerializerRect SerializerRect 
+        public SerializerRect SerializerRect
         {
             get => new SerializerRect(Rect);
         }

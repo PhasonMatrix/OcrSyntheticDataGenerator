@@ -11,7 +11,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGenerator;
+using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGeneratorBase;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
 
@@ -153,14 +153,14 @@ public class CreateFilesViewModel: ViewModelBase
     {
         var imageAndLabelsGuid = Guid.NewGuid();
         // create a new generator object each time
-        ImageAndLabelGenerator generator = new ImageAndLabelGenerator(650, 800);
+        ImageAndLabelGeneratorBase generator = new ScatteredTextGenerator(650, 800);
         generator.BackgroundProbability = _backgroundProbability;
         generator.LinesProbability = _linesProbability;
         generator.NoiseProbability = _noiseProbability;
         generator.BlurProbability = _blurProbability;
         generator.PixelateProbability = _pixelateProbability;
         generator.InvertProbability = _invertImageProbability;
-        generator.GenerateScatteredTextImages();
+        generator.Generate();
 
         string imageFilename = $"{imageAndLabelsGuid}.png";
         string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
