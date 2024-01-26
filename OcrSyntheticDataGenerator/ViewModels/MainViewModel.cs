@@ -97,7 +97,7 @@ public class MainViewModel : ViewModelBase
         generator.PixelateProbability = PixelateProbability;
         generator.InvertProbability = InvertImageProbability;
 
-        generator.GenerateImages();
+        generator.GenerateScatteredTextImages();
 
         LeftBitmap = SKBitmapToAvaloniaBitmap(generator.TextImage);
         RightBitmap = SKBitmapToAvaloniaBitmap(generator.HeatMapImage);

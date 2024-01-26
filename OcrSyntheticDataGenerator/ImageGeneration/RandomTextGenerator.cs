@@ -358,21 +358,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
 
 
-        public double NextGaussian(double mu = 0, double sigma = 1)
-        {
-            var u1 = _random.NextDouble();
-            var u2 = _random.NextDouble();
-
-            var randomStandardNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
-
-            var randomNormal = mu + sigma * randomStandardNormal;
-            return randomNormal;
-        }
-
-
-
-
-
 
 
         // int is word frequency. data gathered from: https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists

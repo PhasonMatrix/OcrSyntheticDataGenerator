@@ -160,7 +160,7 @@ public class CreateFilesViewModel: ViewModelBase
         generator.BlurProbability = _blurProbability;
         generator.PixelateProbability = _pixelateProbability;
         generator.InvertProbability = _invertImageProbability;
-        generator.GenerateImages();
+        generator.GenerateScatteredTextImages();
 
         string imageFilename = $"{imageAndLabelsGuid}.png";
         string labelsFilename = $"{imageAndLabelsGuid}_labels.png";

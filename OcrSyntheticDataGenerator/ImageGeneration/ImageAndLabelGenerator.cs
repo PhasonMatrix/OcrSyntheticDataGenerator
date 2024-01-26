@@ -31,6 +31,10 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         private int _imageHeight;
         RandomTextGenerator _randomTextGenerator = new RandomTextGenerator();
         List<ContentArea> _contentAreas = new List<ContentArea>();
+        private Random _rnd = new Random();
+        private bool _hasDarkBackgroundImage = false;
+        SKColor _backgroundColour = SKColors.White;
+
 
         public SKBitmap TextImage { get; set; }
         public SKBitmap TextMeasuringImage { get; set; }
@@ -46,6 +50,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         public int InvertProbability { get; set; }
         public int PixelateProbability { get; set; }
 
+        
+
 
         public ImageAndLabelGenerator(int imageWidth, int imageHeight)
         {
@@ -60,11 +66,11 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
-        public void GenerateImages()
+        public void GenerateScatteredTextImages()
         {
-            Random rnd = new Random();
             int minFontHeight = 22;
             int maxFontHeight = 92;
+            int noisePercentage = _rnd.Next(1, 100);
 
 
             // set up canvas objects for each image
@@ -73,119 +79,35 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             using (SKCanvas heatMapCanvas = new SKCanvas(HeatMapImage))
             using (SKCanvas characterBoxCanvas = new SKCanvas(CharacterBoxImage))
             {
-                
+
                 // draw image backgrounds
                 textCanvas.Clear(SKColors.White);
                 labelCanvas.Clear(SKColors.Black);
                 heatMapCanvas.Clear(SKColors.Blue);
                 characterBoxCanvas.Clear(SKColors.White);
 
-                bool hasDarkBackgroundImage = false;
+                _hasDarkBackgroundImage = false;
 
                 // add backgound texture image
-                int backgroundImagePercentage = rnd.Next(1, 100);
+                int backgroundImagePercentage = _rnd.Next(1, 100);
                 if (backgroundImagePercentage <= BackgroundProbability)
                 {
-                    DirectoryInfo backgroundImageFolder = new DirectoryInfo("./BackgroundImages");
-                    if (backgroundImageFolder != null)
-                    {
-                        var files = backgroundImageFolder.GetFiles();
-                        int randomFileIndex = rnd.Next(0, files.Length);
-                        var imageFile = files[randomFileIndex];
-
-                        using (SKBitmap backgroundImage = SKBitmap.Decode(imageFile.FullName))
-                        {
-                            int randomRotation = rnd.Next(0, 55);
-
-                            // random tiling modes
-                            SKShaderTileMode tileMode = SKShaderTileMode.Repeat;
-                            if (rnd.Next(1, 100) > 50)
-                            {
-                                tileMode = SKShaderTileMode.Mirror;
-                            }
-
-                            using (SKPaint paint = new SKPaint())
-                            {
-                                paint.Shader = SKShader.CreateBitmap(backgroundImage, tileMode, tileMode);
-                                textCanvas.DrawRect(TextImage.Info.Rect, paint);
-                            }
-
-                            // get average darkness of background image
-                            int totalLightness = 0;
-                            int totalPixels = 0;
-                            for (int pxX = 0; pxX < backgroundImage.Info.Width; pxX += 1)
-                            {
-                                for (int pxY = 0; pxY < backgroundImage.Info.Height; pxY += 1)
-                                {
-                                    totalLightness += backgroundImage.GetPixel(pxX, pxY).Red;
-                                    totalPixels++;
-                                }
-                            }
-                            int averageLightness = totalLightness / totalPixels;
-                            Debug.WriteLine($"background lightness: {averageLightness}");
-                            if (averageLightness <= 240)
-                            {
-                                hasDarkBackgroundImage = true;
-                            }
-                        }
-                    }
+                    DrawBackgroundImage(textCanvas);
                 }
 
 
 
-                // add background noise
-                int noisePercentage = rnd.Next(5, 100);
-                // removed background salt-and-pepper, but foreground noise is done after text drawn.
-
-
                 // add some lines
-                int linePercentage = rnd.Next(1, 100);
+                int linePercentage = _rnd.Next(1, 100);
                 if (linePercentage <= LinesProbability) // only X percent of the time
                 {
-                    int numberOfHorizontalLines = rnd.Next(1, 5);
-                    int numberOfVerticalLines = rnd.Next(1, 4);
-
-                    for (int hl = 0; hl < numberOfHorizontalLines; hl++)
-                    {
-                        int lineY = rnd.Next(0, _imageHeight - 1);
-                        int lineX = rnd.Next(0, _imageHeight / 2);
-                        int lineLength = rnd.Next(30, _imageWidth * 3);
-                        int lineThickness = rnd.Next(1, 4);
-                        SKRect lineRect = new SKRect(lineX, lineY, lineX + lineLength, lineY + lineThickness);
-                        using (SKPaint paint = new SKPaint())
-                        {
-                            paint.IsAntialias = true;
-                            paint.Color = SKColors.Black;
-                            textCanvas.DrawRect(lineRect, paint);
-                        }
-
-                        LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
-                        _contentAreas.Add(lca);
-                    }
-                    for (int vl = 0; vl < numberOfVerticalLines; vl++)
-                    {
-                        int lineY = rnd.Next(0, _imageHeight / 2);
-                        int lineX = rnd.Next(0, _imageHeight - 1);
-                        int lineLength = rnd.Next(30, _imageHeight * 3);
-                        int lineThickness = rnd.Next(1, 4);
-                        SKRect lineRect = new SKRect(lineX, lineY, lineX + lineThickness, lineY + lineLength);
-                        using (SKPaint paint = new SKPaint())
-                        {
-                            paint.IsAntialias = true;
-                            paint.Color = SKColors.Black;
-                            textCanvas.DrawRect(lineRect, paint);
-                        }
-
-                        LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
-                        _contentAreas.Add(lca);
-                    }
-
+                    DrawLines(textCanvas);
                 }
 
 
 
                 // add the text
-                int numberofTextElements = rnd.Next(3, 20);
+                int numberofTextElements = _rnd.Next(3, 22);
 
                 int i = 0;
                 int failedAttempts = 0;
@@ -196,16 +118,15 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
 
                     // random visual attributes
-                    bool inverted = rnd.Next(0, 100) < 20;
-                    bool lightText = rnd.Next(0, 100) < 10;
-                    bool drawBoxAroundText = rnd.Next(0, 100) < 20;
-                    int fontHeight = rnd.Next(minFontHeight, maxFontHeight);
+                    bool isInverted = _rnd.Next(0, 100) < 20;
+                    bool isLightText = _rnd.Next(0, 100) < 10;
+                    bool isBoxAroundText = _rnd.Next(0, 100) < 20;
+                    int fontHeight = _rnd.Next(minFontHeight, maxFontHeight);
 
 
                     // choose a location
-                    
-                    int x = rnd.Next(0, _imageWidth / 2);
-                    int yTextBaseline = rnd.Next(0, _imageHeight) + fontHeight;
+                    int x = _rnd.Next(0, _imageWidth / 2);
+                    int yTextBaseline = _rnd.Next(0, _imageHeight) + fontHeight;
 
 
 
@@ -238,14 +159,12 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
                     }
 
-                    //int y = (int)(yTextBaseline + fontMetrics.Ascent);
-                    //int y = (int)(yTextBaseline + fontMetrics.Top);
                     int y = (int)(yTextBaseline - fontMetrics.CapHeight - 5);
 
                     SKRect measureRect = new SKRect(
-                        x, 
-                        y, 
-                        x + measuredWidth, 
+                        x,
+                        y,
+                        x + measuredWidth,
                         y + fontHeight + 3
                         );
 
@@ -262,24 +181,15 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     }
 
                     // check we haven't overlapped another piece of text
-                    bool overlapsWithSomething = false;
-                    foreach (var area in _contentAreas)
-                    {
-                        SKRect overlapRect = new SKRect(measureRect.Left, measureRect.Top, measureRect.Right, measureRect.Bottom);
-                        overlapRect.Inflate(5, 5);
-                        if (RectanglesOverlap(area.Rect, overlapRect))
-                        {
-                            overlapsWithSomething = true;
-                            break;
-                        }
-                    }
+
+                    bool overlapsWithSomething = CheckOverlapsWithExistingObjects(measureRect);
                     if (overlapsWithSomething)
                     {
                         continue; // try again.
                     }
 
 
-                    // we can fit the whole string on the image.
+                    // if we got here without `break` or `continue` in the checks above, then we can fit the whole string on the image.
                     // start a new content area
                     TextContentArea currentTextContentArea = new TextContentArea
                     {
@@ -296,57 +206,10 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     backgoundRect.Inflate(10, 4);
                     backgoundRect.Top -= 5;
 
-                    SKColor backgroundColour = SKColors.White;
 
-                    
 
                     // draw backgound
-                    if (inverted)
-                    {
-                        byte alpha = (byte)rnd.Next(160, 255); // dark background
-                        backgroundColour = new SKColor(0x00, 0x00, 0x00, alpha);
-                        using (SKPaint paint = new SKPaint())
-                        {
-                            paint.IsAntialias = true;
-                            paint.Color = backgroundColour;
-                            textCanvas.DrawRect(backgoundRect, paint);
-                        }
-                    }
-                    else
-                    {
-                        // not inverse, but we want to sometimes draw a background colour, like a highlighter
-                        if (lightText)
-                        {
-                            byte alpha = (byte)rnd.Next(0, 128);
-                            backgroundColour = new SKColor(0x00, 0x00, 0x00, alpha);
-                            using (SKPaint paint = new SKPaint())
-                            {
-                                paint.IsAntialias = true;
-                                paint.Color = backgroundColour;
-                                textCanvas.DrawRect(backgoundRect, paint);
-                            }
-                        }
-                        // how about a box around the text
-                        else if (drawBoxAroundText)
-                        {
-                            // random offset
-                            int offset = rnd.Next(-10, 8);
-                            backgoundRect.Top += offset;
-                            backgoundRect.Left += offset;
-
-                            // dark coloured box
-                            byte rgb = (byte)rnd.Next(0, 96);
-                            SKColor boxColour = new SKColor(rgb, rgb, rgb);
-
-                            using (SKPaint paint = new SKPaint())
-                            {
-                                paint.IsAntialias = true;
-                                paint.Color = boxColour;
-                                paint.Style = SKPaintStyle.Stroke;
-                                textCanvas.DrawRect(backgoundRect, paint);
-                            }
-                        }
-                    }
+                    DrawTextBlockBackgroundColour(textCanvas, isInverted, isLightText, isBoxAroundText, backgoundRect);
 
 
                     // draw the text
@@ -354,26 +217,21 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     SKColor textColor = SKColors.Black;
 
                     // draw the text on the image
-                    if (inverted)
+                    if (isInverted)
                     {
-                        byte rgb = (byte)rnd.Next(190, 255); // light text
+                        byte rgb = (byte)_rnd.Next(190, 255); // light text
                         textColor = new SKColor(rgb, rgb, rgb);
-                        using (SKPaint paint = new SKPaint())
-                        {
-                            paint.IsAntialias = true;
-                            paint.Color = textColor;
-                            textCanvas.DrawText(text, x, yTextBaseline, font, paint);
-                        }
+                        DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
                     }
                     else
                     {
-                        byte alpha = (byte)rnd.Next(155, 255); // dark text
-                        if (backgroundColour.Alpha < 90) // make it lighter if the background is light
+                        byte alpha = (byte)_rnd.Next(155, 255); // dark text
+                        if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
                         {
-                            alpha = (byte)rnd.Next(200, 255);
+                            alpha = (byte)_rnd.Next(200, 255);
                             // clamp to less than 256
-                            if (alpha > 255) { alpha = 255; } 
-                            
+                            if (alpha > 255) { alpha = 255; }
+
                         }
                         //if (hasDarkBackgroundImage)
                         if (backgroundImagePercentage <= BackgroundProbability) // if any background
@@ -382,38 +240,19 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                             if (alpha < 230) { alpha = 255; }
                         }
                         textColor = new SKColor(0x00, 0x00, 0x00, alpha);
-                        using (SKPaint paint = new SKPaint())
-                        {
-                            paint.IsAntialias = true;
-                            paint.Color = textColor;
-                            textCanvas.DrawText(text, x, yTextBaseline, font, paint);
-                        }
+                        DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
+
                     }
+
+
 
                     // draw text on heatmap
                     var heatMapTextColour = SKColors.Black;
-                    using (SKPaint paint = new SKPaint())
-                    {
-                        paint.IsAntialias = true;
-                        paint.Color = heatMapTextColour;
-                        heatMapCanvas.DrawText(text, x, yTextBaseline, font, paint);
-                    }
-
+                    DrawTextOnCanvas(heatMapCanvas, text, x, yTextBaseline, font, heatMapTextColour);
 
 
                     // measure and crop character box top and bottom
-
-                    SKRect[] croppedCharacterBoxes = new SKRect[characterBoxes.Length];
-                    for (int c = 0; c < characterBoxes.Length; c++)
-                    {
-                        SKRect currentCharBox = characterBoxes[c];
-                        char currentSymbol = text[c];
-                        // difference between charbox top and the y basline where it was drawn
-                        int baselineOffset = (int)(yTextBaseline - currentCharBox.Top);
-
-                        var croppedCharBox = GetCroppedCharacterBox(currentCharBox, currentSymbol, font, baselineOffset);
-                        croppedCharacterBoxes[c] = croppedCharBox;
-                    }
+                    SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes);
 
 
 
@@ -459,121 +298,236 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 }
 
 
-
-
-                // draw foreground noise 
-
-                Stopwatch sw = Stopwatch.StartNew();
-
-                //int noisePercentage = rnd.Next(1, 100);
-                if (noisePercentage <= NoiseProbability)
-                {
-                    // draw pixels?
-                    for (int x = 0; x < _imageWidth; x++)
-                    {
-                        for (int y = 0; y < _imageHeight; y++)
-                        {
-                            int pixelProbability = 5;
-                            int pixelPercentage = rnd.Next(1, 100);
-                            if (pixelPercentage < pixelProbability)
-                            {
-                                byte lightness = (byte)(255 - Math.Abs(_randomTextGenerator.NextGaussian(0, 2) * 255));
-                                SKColor color = new SKColor(lightness, lightness, lightness);
-                                TextImage.SetPixel(x, y, color);
-                            }
-                        }
-                    }
-                }
-
-                Debug.WriteLine($"Noise drawn with setPixel in {sw.ElapsedMilliseconds}ms");
-                sw.Restart();
-
-
-
-
-                // blur
-                int blurPercentage = rnd.Next(1, 100);
-                if (blurPercentage <= BlurProbability)
-                {
-                    float xBlurAmount = rnd.Next(85, 200) / 100;
-                    float yBlurAmount = rnd.Next(85, 200) / 100;
-                    //float blurAmount = 0.85f;
-                    using (SKPaint paint = new SKPaint())
-                    {
-                        paint.ImageFilter = SKImageFilter.CreateBlur(xBlurAmount, yBlurAmount);
-
-                        textCanvas.DrawBitmap(TextImage, 0, 0, paint);
-                    }
-                }
-
-
-                // darken if blured
-                if (blurPercentage <= BlurProbability)
-                {
-                    using (SKPaint paint = new SKPaint())
-                    {
-                        SKHighContrastConfig config = new SKHighContrastConfig();
-                        config.Contrast = 0.05f;
-                        paint.ColorFilter = SKColorFilter.CreateHighContrast(config);
-                        textCanvas.DrawBitmap(TextImage, 0, 0, paint);
-                    }
-                }
-
-
-
-                // pixelate
-
-                int pixelatePercentage = rnd.Next(1, 100);
-                if (pixelatePercentage <= PixelateProbability)
-                {
-
-                    // downsize to around a half
-                    double pixelateAmount = rnd.NextDouble() * (2.0 - 1.0) + 1.0; // * (maximum - minimum) + minimum;
-
-                    SKSizeI size = new SKSizeI();
-                    size.Width = (int)(TextImage.Width / pixelateAmount);
-                    size.Height = (int)(TextImage.Height / pixelateAmount);
-
-                    SKBitmap lowResBitmap = TextImage.Resize(size, SKFilterQuality.Low);
-
-                    var destinationRect = new SKRect(0, 0, TextImage.Width, TextImage.Height);
-
-
-                    // redraw at full size with no antialiasing/
-                    using (SKPaint paint = new SKPaint())
-                    {
-                        paint.IsAntialias = false; // make it bad
-                        textCanvas.DrawBitmap(lowResBitmap, destinationRect, paint);
-                    }
-
-                }
-
-
-
-                // invert
-                int invertPercentage = rnd.Next(1, 100);
-                if (invertPercentage <= InvertProbability)
-                {
-                    var inverterMatrix = new float[20] {
-                        -1f,  0f,  0f, 0f, 1f,
-                        0f, -1f,  0f, 0f, 1f,
-                        0f,  0f, -1f, 0f, 1f,
-                        0f,  0f,  0f, 1f, 0f
-                    };
-
-                    using (SKPaint paint = new SKPaint())
-                    {
-                        paint.ColorFilter = SKColorFilter.CreateColorMatrix(inverterMatrix);
-                        textCanvas.DrawBitmap(TextImage, 0, 0, paint);
-                    }
-                }
-
-
+                // ---- post processing ----
+                PostProcessing(noisePercentage);
 
             }
 
         }
 
+
+
+
+        private void PostProcessing(int noisePercentage)
+        {
+            // draw foreground noise 
+            if (noisePercentage <= NoiseProbability)
+            {
+                ImageProcessing.DrawForgroundNoise(TextImage);
+            }
+
+            // blur
+            if (BlurProbability >= _rnd.Next(1, 100))
+            {
+                float xBlurAmount = _rnd.Next(85, 200) / 100;
+                float yBlurAmount = _rnd.Next(85, 200) / 100;
+                ImageProcessing.BlurImage(TextImage, xBlurAmount, yBlurAmount);
+                // darken if blured
+                ImageProcessing.DarkenImage(TextImage);
+            }
+
+            // pixelate
+            if (PixelateProbability >= _rnd.Next(1, 100))
+            {
+                double pixelateAmount = _rnd.NextDouble() * (2.0 - 1.0) + 1.0;
+                ImageProcessing.PixelateImage(TextImage, pixelateAmount);
+            }
+
+            // invert
+            if (InvertProbability >= _rnd.Next(1, 100))
+            {
+                ImageProcessing.InvertImage(TextImage);
+            }
+        }
+
+
+
+
+
+        private SKRect[] GetCroppedCharacterBoxes(string text, int yTextBaseline, SKFont font, SKRect[] characterBoxes)
+        {
+            SKRect[] croppedCharacterBoxes = new SKRect[characterBoxes.Length];
+            for (int c = 0; c < characterBoxes.Length; c++)
+            {
+                SKRect currentCharBox = characterBoxes[c];
+                char currentSymbol = text[c];
+                // difference between charbox top and the y basline where it was drawn
+                int baselineOffset = (int)(yTextBaseline - currentCharBox.Top);
+
+                var croppedCharBox = GetCroppedCharacterBox(currentCharBox, currentSymbol, font, baselineOffset);
+                croppedCharacterBoxes[c] = croppedCharBox;
+            }
+
+            return croppedCharacterBoxes;
+        }
+
+
+        private static void DrawTextOnCanvas(SKCanvas textCanvas, string text, int x, int yTextBaseline, SKFont font, SKColor textColor)
+        {
+            using (SKPaint paint = new SKPaint())
+            {
+                paint.IsAntialias = true;
+                paint.Color = textColor;
+                textCanvas.DrawText(text, x, yTextBaseline, font, paint);
+            }
+        }
+
+
+
+        private void DrawTextBlockBackgroundColour(SKCanvas textCanvas, bool isInverted, bool isLightText, bool isBoxAroundText, SKRect backgoundRect)
+        {
+            if (isInverted)
+            {
+                byte alpha = (byte)_rnd.Next(160, 255); // dark background
+                _backgroundColour = new SKColor(0x00, 0x00, 0x00, alpha);
+                using (SKPaint paint = new SKPaint())
+                {
+                    paint.IsAntialias = true;
+                    paint.Color = _backgroundColour;
+                    textCanvas.DrawRect(backgoundRect, paint);
+                }
+            }
+            else
+            {
+                // not inverse, but we want to sometimes draw a background colour, like a highlighter
+                if (isLightText)
+                {
+                    byte alpha = (byte)_rnd.Next(0, 128);
+                    _backgroundColour = new SKColor(0x00, 0x00, 0x00, alpha);
+                    using (SKPaint paint = new SKPaint())
+                    {
+                        paint.IsAntialias = true;
+                        paint.Color = _backgroundColour;
+                        textCanvas.DrawRect(backgoundRect, paint);
+                    }
+                }
+                // how about a box around the text
+                else if (isBoxAroundText)
+                {
+                    // random offset
+                    int offset = _rnd.Next(-10, 8);
+                    backgoundRect.Top += offset;
+                    backgoundRect.Left += offset;
+
+                    // dark coloured box
+                    byte rgb = (byte)_rnd.Next(0, 96);
+                    SKColor boxColour = new SKColor(rgb, rgb, rgb);
+
+                    using (SKPaint paint = new SKPaint())
+                    {
+                        paint.IsAntialias = true;
+                        paint.Color = boxColour;
+                        paint.Style = SKPaintStyle.Stroke;
+                        textCanvas.DrawRect(backgoundRect, paint);
+                    }
+                }
+            }
+        }
+
+        private bool CheckOverlapsWithExistingObjects(SKRect measureRect)
+        {
+            foreach (var area in _contentAreas)
+            {
+                SKRect overlapRect = new SKRect(measureRect.Left, measureRect.Top, measureRect.Right, measureRect.Bottom);
+                overlapRect.Inflate(5, 5);
+                if (RectanglesOverlap(area.Rect, overlapRect))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
+        private void DrawLines(SKCanvas textCanvas)
+        {
+            int numberOfHorizontalLines = _rnd.Next(1, 5);
+            int numberOfVerticalLines = _rnd.Next(1, 4);
+
+            for (int hl = 0; hl < numberOfHorizontalLines; hl++)
+            {
+                int lineY = _rnd.Next(0, _imageHeight - 1);
+                int lineX = _rnd.Next(0, _imageHeight / 2);
+                int lineLength = _rnd.Next(30, _imageWidth * 3);
+                int lineThickness = _rnd.Next(1, 4);
+                SKRect lineRect = new SKRect(lineX, lineY, lineX + lineLength, lineY + lineThickness);
+                using (SKPaint paint = new SKPaint())
+                {
+                    paint.IsAntialias = true;
+                    paint.Color = SKColors.Black;
+                    textCanvas.DrawRect(lineRect, paint);
+                }
+
+                LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
+                _contentAreas.Add(lca);
+            }
+            for (int vl = 0; vl < numberOfVerticalLines; vl++)
+            {
+                int lineY = _rnd.Next(0, _imageHeight / 2);
+                int lineX = _rnd.Next(0, _imageHeight - 1);
+                int lineLength = _rnd.Next(30, _imageHeight * 3);
+                int lineThickness = _rnd.Next(1, 4);
+                SKRect lineRect = new SKRect(lineX, lineY, lineX + lineThickness, lineY + lineLength);
+                using (SKPaint paint = new SKPaint())
+                {
+                    paint.IsAntialias = true;
+                    paint.Color = SKColors.Black;
+                    textCanvas.DrawRect(lineRect, paint);
+                }
+
+                LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
+                _contentAreas.Add(lca);
+            }
+        }
+
+
+        private void DrawBackgroundImage(SKCanvas textCanvas)
+        {
+            DirectoryInfo backgroundImageFolder = new DirectoryInfo("./BackgroundImages");
+            if (backgroundImageFolder != null)
+            {
+                var files = backgroundImageFolder.GetFiles();
+                int randomFileIndex = _rnd.Next(0, files.Length);
+                var imageFile = files[randomFileIndex];
+
+                using (SKBitmap backgroundImage = SKBitmap.Decode(imageFile.FullName))
+                {
+                    int randomRotation = _rnd.Next(0, 55);
+
+                    // random tiling modes
+                    SKShaderTileMode tileMode = SKShaderTileMode.Repeat;
+                    if (_rnd.Next(1, 100) > 50)
+                    {
+                        tileMode = SKShaderTileMode.Mirror;
+                    }
+
+                    using (SKPaint paint = new SKPaint())
+                    {
+                        paint.Shader = SKShader.CreateBitmap(backgroundImage, tileMode, tileMode);
+                        textCanvas.DrawRect(TextImage.Info.Rect, paint);
+                    }
+
+                    // get average darkness of background image
+                    int totalLightness = 0;
+                    int totalPixels = 0;
+                    for (int pxX = 0; pxX < backgroundImage.Info.Width; pxX += 1)
+                    {
+                        for (int pxY = 0; pxY < backgroundImage.Info.Height; pxY += 1)
+                        {
+                            totalLightness += backgroundImage.GetPixel(pxX, pxY).Red;
+                            totalPixels++;
+                        }
+                    }
+                    int averageLightness = totalLightness / totalPixels;
+                    Debug.WriteLine($"background lightness: {averageLightness}");
+                    if (averageLightness <= 240)
+                    {
+                        _hasDarkBackgroundImage = true;
+                    }
+                }
+            }
+        }
 
 
         private List<WordContentArea> CreateWordAndCharacterObjects(string text, SKRect[] characterBoxes)
@@ -735,8 +689,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
-
-
         public SKRect GetCroppedCharacterBox(SKRect charRect, char symbol, SKFont font, int yBaseline)
         {
             using (SKBitmap b = new SKBitmap((int)charRect.Width + 2, (int)charRect.Height + 2))
@@ -799,8 +751,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 return croppedRect;
             }
         }
-
-
 
 
         // collision detection
@@ -1019,7 +969,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             }
             else
             {
-                // export noting
+                // export nothing
             }
 
         }
