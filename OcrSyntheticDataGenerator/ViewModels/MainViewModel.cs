@@ -89,7 +89,7 @@ public class MainViewModel : ViewModelBase
     {
         SetMouseCursorToWaiting();
 
-        ImageAndLabelGeneratorBase generator = new ParagraphGenerator(650, 800);
+        ImageAndLabelGeneratorBase generator = new ScatteredTextGenerator(650, 800);
         generator.BackgroundProbability = BackgroundProbability;
         generator.LinesProbability = LinesProbability;
         generator.NoiseProbability = NoiseProbability;
@@ -100,7 +100,7 @@ public class MainViewModel : ViewModelBase
         generator.Generate();
 
         LeftBitmap = SKBitmapToAvaloniaBitmap(generator.TextImage);
-        RightBitmap = SKBitmapToAvaloniaBitmap(generator.CharacterBoxImage);
+        RightBitmap = SKBitmapToAvaloniaBitmap(generator.HeatMapImage);
 
         SetMouseCursorToDefault();
     }

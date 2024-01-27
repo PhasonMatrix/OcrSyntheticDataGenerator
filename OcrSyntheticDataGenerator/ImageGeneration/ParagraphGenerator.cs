@@ -77,7 +77,7 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
 
                 // choose text location
                 int x = 5;
-                int yTextBaseline = (lineIndex + 1) * (fontHeight + lineSpace) ;
+                int yTextBaseline = (lineIndex + 1) * (fontHeight + lineSpace);
 
                 // measure a rectangle to see if we can fit it on the image.
                 SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
@@ -143,70 +143,35 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
                 SKRect[] characterBoxes = ConstructCharacterBoundingBoxes(text, glyphPositions, glyphWidths, measureRect);
 
 
-                
-                DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
-
-
-
-                // draw text on heatmap
-                var heatMapTextColour = SKColors.Black;
-                DrawTextOnCanvas(heatMapCanvas, text, x, yTextBaseline, font, heatMapTextColour);
-
-
-
                 // measure and crop character box top and bottom
                 SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes);
-
-
-                // Character Box Image - draw text
-                textColor = SKColors.Black;
-                using (SKPaint paint = new SKPaint())
-                {
-                    paint.IsAntialias = true;
-                    paint.Color = textColor;
-                    characterBoxCanvas.DrawText(text, x, yTextBaseline, font, paint);
-                }
-
-                // Character Box Image - draw boxes
-
-                SKColor charBoxColour = new SKColor(0, 100, 255, 220);
-                using (SKPaint paint = new SKPaint())
-                {
-                    paint.IsAntialias = true;
-                    paint.Color = charBoxColour;
-                    paint.Style = SKPaintStyle.Stroke;
-                    foreach (SKRect characterBox in croppedCharacterBoxes)
-                    {
-                        characterBoxCanvas.DrawRect(characterBox, paint);
-                        // label image and heatmap image
-
-                        DrawCharacterProbabilityLabels(characterBox, labelCanvas);
-                        DrawCharacterHeatMap(characterBox, heatMapCanvas);
-                    }
-
-                    
-                }
-
 
 
                 List<WordContentArea> words = CreateWordAndCharacterObjects(text, croppedCharacterBoxes);
                 currentTextContentArea.Words = words;
                 _contentAreas.Add(currentTextContentArea);
 
-                SKColor wordBoxColour = new SKColor(0, 255, 50, 220);
-                using (SKPaint paint = new SKPaint())
-                {
-                    paint.IsAntialias = true;
-                    paint.Color = wordBoxColour;
-                    paint.Style = SKPaintStyle.Stroke;
-                    foreach (var word in words)
-                    {
-                        SKRect wordDisplayRect = new SKRect(word.Rect.Left, word.Rect.Top, word.Rect.Right, word.Rect.Bottom);
-                        wordDisplayRect.Inflate(2, 2);
-                        characterBoxCanvas.DrawRect(wordDisplayRect, paint);
-                    }
-                }
-                
+
+
+
+                // draw text on main image
+                DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
+
+
+                // draw data on the other images. bounding boxes, labels, heatmap, etc.
+
+
+                // draw text on heatmap
+                DrawLabels(
+                    font, 
+                    labelCanvas, 
+                    heatMapCanvas, 
+                    characterBoxCanvas, 
+                    text, 
+                    x, 
+                    yTextBaseline, 
+                    croppedCharacterBoxes, 
+                    words);
 
             }
 
@@ -220,4 +185,7 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
 
 
     }
+
+
+
 }

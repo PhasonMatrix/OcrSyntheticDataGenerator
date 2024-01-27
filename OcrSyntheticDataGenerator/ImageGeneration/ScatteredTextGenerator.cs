@@ -130,9 +130,16 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                     continue; // we couldn't fit this on the image
                 }
 
+
+                SKRect backgoundRect = new SKRect(measureRect.Left, measureRect.Top, measureRect.Right, measureRect.Bottom); // copy
+                int inflateAmount = _rnd.Next(1, 9);
+                backgoundRect.Inflate(inflateAmount * 2, inflateAmount);
+                backgoundRect.Top -= inflateAmount;
+
+
                 // check we haven't overlapped another piece of text
 
-                bool overlapsWithSomething = CheckOverlapsWithExistingObjects(measureRect);
+                bool overlapsWithSomething = CheckOverlapsWithExistingObjects(backgoundRect);
                 if (overlapsWithSomething)
                 {
                     continue; // try again.
@@ -152,15 +159,20 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                 SKRect[] characterBoxes = ConstructCharacterBoundingBoxes(text, glyphPositions, glyphWidths, measureRect);
 
 
-                SKRect backgoundRect = new SKRect(measureRect.Left, measureRect.Top, measureRect.Right, measureRect.Bottom); // copy
-                backgoundRect.Inflate(10, 4);
-                backgoundRect.Top -= 5;
+                // measure and crop character box top and bottom
+                SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes);
 
 
+                List<WordContentArea> words = CreateWordAndCharacterObjects(text, croppedCharacterBoxes);
+                currentTextContentArea.Words = words;
+                _contentAreas.Add(currentTextContentArea);
+
+
+
+                // draw text on main image
 
                 // draw backgound
                 DrawTextBlockBackgroundColour(textCanvas, isInverted, isLightText, isBoxAroundText, backgoundRect);
-
 
                 // draw the text
 
@@ -195,54 +207,19 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                 }
 
 
-
-                // draw text on heatmap
-                var heatMapTextColour = SKColors.Black;
-                DrawTextOnCanvas(heatMapCanvas, text, x, yTextBaseline, font, heatMapTextColour);
-
-
-                // measure and crop character box top and bottom
-                SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes);
-
-
-
-                // draw data on the other images. bounding boxes, labels, heatmap, etc.
+                DrawLabels(
+                  font,
+                  labelCanvas,
+                  heatMapCanvas,
+                  characterBoxCanvas,
+                  text,
+                  x,
+                  yTextBaseline,
+                  croppedCharacterBoxes,
+                  words);
 
 
-                // Character Box Image - draw text
-                textColor = SKColors.Black;
-                using (SKPaint paint = new SKPaint())
-                {
-                    paint.IsAntialias = true;
-                    paint.Color = textColor;
-                    characterBoxCanvas.DrawText(text, x, yTextBaseline, font, paint);
-                }
 
-                // Character Box Image - draw boxes
-
-                SKColor charBoxColour = new SKColor(0, 100, 255, 220);
-                using (SKPaint paint = new SKPaint())
-                {
-                    foreach (SKRect characterBox in croppedCharacterBoxes)
-                    {
-                        paint.IsAntialias = true;
-                        paint.Color = charBoxColour;
-                        paint.Style = SKPaintStyle.Stroke;
-                        characterBoxCanvas.DrawRect(characterBox, paint);
-
-
-                        // label image and heatmap image
-
-                        DrawCharacterProbabilityLabels(characterBox, labelCanvas);
-                        DrawCharacterHeatMap(characterBox, heatMapCanvas);
-
-                    }
-                }
-
-
-                List<WordContentArea> words = CreateWordAndCharacterObjects(text, croppedCharacterBoxes);
-                currentTextContentArea.Words = words;
-                _contentAreas.Add(currentTextContentArea);
 
                 i++;
             }

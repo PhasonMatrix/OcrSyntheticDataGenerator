@@ -1,4 +1,6 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Styling;
 using Microsoft.CodeAnalysis.Diagnostics;
 using OcrSyntheticDataGenerator.ContentModel;
 using SkiaSharp;
@@ -212,18 +214,28 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             int numberOfHorizontalLines = _rnd.Next(1, 5);
             int numberOfVerticalLines = _rnd.Next(1, 4);
 
+
             for (int hl = 0; hl < numberOfHorizontalLines; hl++)
             {
                 int lineY = _rnd.Next(0, _imageHeight - 1);
                 int lineX = _rnd.Next(0, _imageHeight / 2);
                 int lineLength = _rnd.Next(30, _imageWidth * 3);
                 int lineThickness = _rnd.Next(1, 4);
+                bool isDashedLine = _rnd.Next(1, 100) < 20;
                 SKRect lineRect = new SKRect(lineX, lineY, lineX + lineLength, lineY + lineThickness);
+
+                SKPath path = new SKPath();
+                path.MoveTo(lineX, lineY);
+                path.LineTo(lineX + lineLength, lineY);
+
                 using (SKPaint paint = new SKPaint())
                 {
                     paint.IsAntialias = true;
                     paint.Color = SKColors.Black;
-                    textCanvas.DrawRect(lineRect, paint);
+                    paint.Style = SKPaintStyle.Stroke;
+                    paint.StrokeWidth = lineThickness;
+                    if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDahPattern(), 0); }
+                    textCanvas.DrawPath(path, paint);
                 }
 
                 LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
@@ -235,18 +247,47 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 int lineX = _rnd.Next(0, _imageHeight - 1);
                 int lineLength = _rnd.Next(30, _imageHeight * 3);
                 int lineThickness = _rnd.Next(1, 4);
+                bool isDashedLine = _rnd.Next(1, 100) < 8;
                 SKRect lineRect = new SKRect(lineX, lineY, lineX + lineThickness, lineY + lineLength);
+
+                SKPath path = new SKPath();
+                path.MoveTo(lineX, lineY);
+                path.LineTo(lineX, lineY + lineLength);
                 using (SKPaint paint = new SKPaint())
                 {
                     paint.IsAntialias = true;
                     paint.Color = SKColors.Black;
-                    textCanvas.DrawRect(lineRect, paint);
+                    paint.Style = SKPaintStyle.Stroke;
+                    paint.StrokeWidth = lineThickness;
+                    if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDahPattern(), 0); }
+                    textCanvas.DrawPath(path, paint);
                 }
 
                 LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
                 _contentAreas.Add(lca);
             }
         }
+
+
+
+        protected float[] GetRandomLineDahPattern()
+        {
+
+            if (_rnd.Next(1, 100) < 90) // most of the time, just a simple dash
+            {
+                float dashSize = _rnd.Next(5, 20);
+                float gapSize = _rnd.Next(5, 20);
+                return new float[] { dashSize, gapSize };
+            }
+            else // sometimes do a complex dash of shorter and longer dashes
+            {
+                float smallDashSize = _rnd.Next(5, 10);
+                float largeDashSize = _rnd.Next(12, 30);
+                float gapSize = _rnd.Next(5, 20);
+                return new float[] { smallDashSize, gapSize, largeDashSize, gapSize };
+            }
+        }
+
 
 
         protected void DrawBackgroundImage(SKCanvas textCanvas)
@@ -391,6 +432,70 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             }
 
             return bitmap;
+        }
+
+
+
+        protected void DrawLabels(
+            SKFont font,
+            SKCanvas labelCanvas,
+            SKCanvas heatMapCanvas,
+            SKCanvas characterBoxCanvas,
+            string text,
+            int x,
+            int yTextBaseline,
+            SKRect[] croppedCharacterBoxes,
+            List<WordContentArea> words)
+        {
+
+            SKColor textColor;
+            var heatMapTextColour = SKColors.Black;
+            DrawTextOnCanvas(heatMapCanvas, text, x, yTextBaseline, font, heatMapTextColour);
+
+
+
+            // Character Box Image - draw text
+            textColor = SKColors.Black;
+            using (SKPaint paint = new SKPaint())
+            {
+                paint.IsAntialias = true;
+                paint.Color = textColor;
+                characterBoxCanvas.DrawText(text, x, yTextBaseline, font, paint);
+            }
+
+            // Character Box Image - draw boxes
+
+            SKColor charBoxColour = new SKColor(0, 100, 255, 220);
+            using (SKPaint paint = new SKPaint())
+            {
+                paint.IsAntialias = true;
+                paint.Color = charBoxColour;
+                paint.Style = SKPaintStyle.Stroke;
+                foreach (SKRect characterBox in croppedCharacterBoxes)
+                {
+                    characterBoxCanvas.DrawRect(characterBox, paint);
+                    // label image and heatmap image
+
+                    DrawCharacterProbabilityLabels(characterBox, labelCanvas);
+                    DrawCharacterHeatMap(characterBox, heatMapCanvas);
+                }
+            }
+
+
+            SKColor wordBoxColour = new SKColor(0, 255, 50, 220);
+            using (SKPaint paint = new SKPaint())
+            {
+                paint.IsAntialias = true;
+                paint.Color = wordBoxColour;
+                paint.Style = SKPaintStyle.Stroke;
+                foreach (var word in words)
+                {
+                    SKRect wordDisplayRect = new SKRect(word.Rect.Left, word.Rect.Top, word.Rect.Right, word.Rect.Bottom);
+                    wordDisplayRect.Inflate(2, 2);
+                    characterBoxCanvas.DrawRect(wordDisplayRect, paint);
+                }
+            }
+
         }
 
 
