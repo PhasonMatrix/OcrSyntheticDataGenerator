@@ -96,7 +96,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             // pixelate
             if (PixelateProbability >= _rnd.Next(1, 100))
             {
-                double pixelateAmount = _rnd.NextDouble() * (2.0 - 1.0) + 1.0;
+                double pixelateAmount = (_rnd.NextDouble() * 1.0) + 1.0;
                 ImageProcessing.PixelateImage(TextImage, pixelateAmount);
             }
 
