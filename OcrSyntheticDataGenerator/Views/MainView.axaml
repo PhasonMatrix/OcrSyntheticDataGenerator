@@ -3,8 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="850"
-			 MinWidth="1200" MinHeight="850"
+             mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="850"
+			 MinWidth="1400" MinHeight="850"
              x:Class="OcrSyntheticDataGenerator.Views.MainView"
              x:DataType="vm:MainViewModel" >
 	<Design.DataContext>
@@ -80,7 +80,7 @@
 				<Border  BorderBrush="#222" BorderThickness="1" CornerRadius="5" Padding="4" Grid.Row="0" Grid.Column="0" Margin="5">
 					<Image 
 						x:Name="LeftImage"  
-						MinWidth="700" 
+						MinWidth="800" 
 						MinHeight="800" 
 						Source="{Binding LeftBitmap}" 
 						Stretch="None"
@@ -89,7 +89,7 @@
 				<Border BorderBrush="#222" BorderThickness="1" CornerRadius="5" Padding="4" Grid.Row="0" Grid.Column="1" Margin="5">
 					<Image 
 						Name="RightImage"  
-						MinWidth="700" 
+						MinWidth="800" 
 						MinHeight="800"
 						Source="{Binding RightBitmap}"
 						Stretch="None"

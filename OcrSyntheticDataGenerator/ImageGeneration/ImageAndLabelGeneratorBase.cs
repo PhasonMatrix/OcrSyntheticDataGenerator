@@ -88,8 +88,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             // blur
             if (BlurProbability >= _rnd.Next(1, 100))
             {
-                float xBlurAmount = _rnd.Next(85, 200) / 100;
-                float yBlurAmount = _rnd.Next(85, 200) / 100;
+                float xBlurAmount = _rnd.Next(85, 125) / 100;
+                float yBlurAmount = _rnd.Next(85, 125) / 100;
                 ImageProcessing.BlurImage(TextImage, xBlurAmount, yBlurAmount);
                 // darken if blured
                 ImageProcessing.DarkenImage(TextImage);
@@ -98,7 +98,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             // pixelate
             if (PixelateProbability >= _rnd.Next(1, 100))
             {
-                double pixelateAmount = (_rnd.NextDouble() * 1.0) + 1.0;
+                double pixelateAmount =  (_rnd.NextDouble() * 0.25) + 1.0; // 1.0 - 1.25
                 ImageProcessing.PixelateImage(TextImage, pixelateAmount);
             }
 
@@ -234,7 +234,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     paint.Color = SKColors.Black;
                     paint.Style = SKPaintStyle.Stroke;
                     paint.StrokeWidth = lineThickness;
-                    if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDahPattern(), 0); }
+                    if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDashPattern(), 0); }
                     textCanvas.DrawPath(path, paint);
                 }
 
@@ -259,7 +259,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     paint.Color = SKColors.Black;
                     paint.Style = SKPaintStyle.Stroke;
                     paint.StrokeWidth = lineThickness;
-                    if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDahPattern(), 0); }
+                    if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDashPattern(), 0); }
                     textCanvas.DrawPath(path, paint);
                 }
 
@@ -270,7 +270,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
 
 
-        protected float[] GetRandomLineDahPattern()
+        protected float[] GetRandomLineDashPattern()
         {
 
             if (_rnd.Next(1, 100) < 90) // most of the time, just a simple dash
@@ -634,6 +634,15 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                              r2.Top > r1.Bottom;
 
             return !noOverlap;
+        }
+
+
+        protected bool RectangleFitsInside(SKRect innerRect, SKRect outerRect)
+        {
+            return innerRect.Left   >= outerRect.Left  &&
+                   innerRect.Top    >= outerRect.Top   &&
+                   innerRect.Right  <= outerRect.Right &&
+                   innerRect.Bottom <= outerRect.Bottom;
         }
 
 

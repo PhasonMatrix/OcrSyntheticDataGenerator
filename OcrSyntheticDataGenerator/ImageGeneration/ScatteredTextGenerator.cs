@@ -181,8 +181,8 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                 // draw the text on the image
                 if (isInverted)
                 {
-                    byte rgb = (byte)_rnd.Next(190, 255); // light text
-                    textColor = new SKColor(rgb, rgb, rgb);
+                    byte alpha = (byte)_rnd.Next(155, 255); 
+                    textColor = new SKColor(255, 255, 255, alpha); // light text
                     DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
                 }
                 else

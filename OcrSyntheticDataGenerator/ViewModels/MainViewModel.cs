@@ -89,7 +89,7 @@ public class MainViewModel : ViewModelBase
     {
         SetMouseCursorToWaiting();
 
-        ImageAndLabelGeneratorBase generator = new ScatteredTextGenerator(650, 800);
+        ImageAndLabelGeneratorBase generator = new TableGenerator(700, 800); ; // new TableGenerator(650, 800);
         generator.BackgroundProbability = BackgroundProbability;
         generator.LinesProbability = LinesProbability;
         generator.NoiseProbability = NoiseProbability;

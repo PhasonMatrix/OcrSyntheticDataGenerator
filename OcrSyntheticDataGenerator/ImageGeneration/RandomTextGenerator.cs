@@ -108,7 +108,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         // for the types of codes you see on documents, like invoices. May contain leters, numbers and puntiation characters like #,:,-,/, etc.
         public string GetRandomAlphaNumericCode()
         {
-            int length = _random.Next(1, 20);
+            int length = _random.Next(1, 15);
             string code = "";
             for (int i = 0; i < length; i++)
             {
@@ -177,6 +177,13 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             return start.AddDays(_random.Next(range)).ToString(GetRandomDateFormat());
         }
 
+
+        public string GetRandomDate(string format)
+        {
+            DateTime start = new DateTime(1995, 1, 1);
+            int range = (DateTime.Today - start).Days;
+            return start.AddDays(_random.Next(range)).ToString(format);
+        }
 
         public string GetRandomDateFormat()
         {
