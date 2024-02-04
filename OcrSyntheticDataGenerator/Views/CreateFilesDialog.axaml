@@ -4,8 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
 		xmlns:ig="clr-namespace:OcrSyntheticDataGenerator.ImageGeneration"
-        mc:Ignorable="d" d:DesignWidth="580" d:DesignHeight="510"
-		Width="580" Height="510"
+        mc:Ignorable="d" d:DesignWidth="580" d:DesignHeight="500"
+		Width="580" Height="500"
         x:Class="OcrSyntheticDataGenerator.Views.CreateFilesDialog"
 		x:DataType="vm:CreateFilesViewModel"
         Title="Create Files" 
@@ -16,8 +16,41 @@
 	</Design.DataContext>
 	
 	<StackPanel Width="500" HorizontalAlignment="Center">
-		<!--<TextBlock> Probability settings from the main window are used when generating files.</TextBlock>-->
-		<Label Content="Number of images:" Margin="0 15 0 0"/>
+
+		<Grid ColumnDefinitions="*, *" RowDefinitions="*,*,*" Margin="20">
+
+			<Label Content="Text layout type:" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="10"/>
+
+			<ComboBox x:Name="LayoutTypeComboBox"
+					  SelectedItem="{Binding ComboBoxTextLayoutType}"
+				      Margin="10"
+					  Width="240"
+					  Grid.Row="0" Grid.Column="1">
+			</ComboBox>
+
+			<Label Content="Number of images:" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="10"/>
+
+			<NumericUpDown x:Name="NumberOfImagesInputBox"
+							Value="{Binding NumberOfFilesToGenerate}"
+							Increment="100"
+							FormatString="0"
+						    Margin="10"
+						    Grid.Row="1" Grid.Column="1"/>
+
+			<Label Content="Bounding box data files:" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="10"/>
+
+			<ComboBox x:Name="DataFileTypeComboBox"
+					  SelectedItem="{Binding ComboBoxSaveDataFileType}"
+				      Margin="10"
+					  Width="240"
+					  Grid.Row="2" Grid.Column="1">
+			</ComboBox>
+			
+		</Grid>
+		
+		
+		
+		<!--<Label Content="Number of images:" Margin="0 15 0 0"/>
 		
 		<NumericUpDown x:Name="NumberOfImagesInputBox"
 						Value="{Binding NumberOfFilesToGenerate}"
@@ -32,7 +65,7 @@
 		<ComboBox x:Name="DataFileTypeComboBox" 
 				  SelectedItem="{Binding ComboBoxSaveDataFileType}" 
 				  Width="200" Margin="0 15" >
-		</ComboBox>
+		</ComboBox>-->
 
 		<Label Content="Output directory:" Margin="0 15 0 0"/>
 		<TextBox Text="{Binding OutputDirectory}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="0 15" Width="500"/>

@@ -9,6 +9,8 @@ using System;
 using System.IO;
 using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGeneratorBase;
 using OcrSyntheticDataGenerator.Views;
+using System.ComponentModel;
+using System.Reflection;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
 
@@ -24,6 +26,8 @@ public class MainViewModel : ViewModelBase
     private int _blurProbability = 10;
     private int _pixelateProbability = 10;
     private int _invertImageProbability = 10;
+
+    private string _comboBoxTextLayoutType = "Scattered Text";
 
     private Cursor _pointerCursor = new Cursor(StandardCursorType.Help);
 
@@ -78,6 +82,13 @@ public class MainViewModel : ViewModelBase
     }
 
 
+    public string ComboBoxTextLayoutType
+    {
+        get => _comboBoxTextLayoutType;
+        private set => this.RaiseAndSetIfChanged(ref _comboBoxTextLayoutType, value);
+    }
+
+
     public Cursor PointerCursor
     {
         get => _pointerCursor;
@@ -89,7 +100,34 @@ public class MainViewModel : ViewModelBase
     {
         SetMouseCursorToWaiting();
 
-        ImageAndLabelGeneratorBase generator = new TableGenerator(700, 800); ; // new TableGenerator(650, 800);
+        LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
+        foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
+        {
+            if (_comboBoxTextLayoutType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
+            {
+                layoutTypeComboBoxSelection = value;
+                break;
+            }
+        }
+
+        int imageWidth = 700;
+        int imageHeight = 800;
+
+        ImageAndLabelGeneratorBase generator = null;
+        
+        switch (layoutTypeComboBoxSelection) {
+
+            case LayoutFileType.ScatteredText:
+                generator = new ScatteredTextGenerator(imageWidth, imageHeight); 
+                break;
+            case LayoutFileType.Paragraph:
+                generator = new ParagraphGenerator(imageWidth, imageHeight);
+                break;
+            case LayoutFileType.Table:
+                generator = new TableGenerator(imageWidth, imageHeight);
+                break;
+        }
+
         generator.BackgroundProbability = BackgroundProbability;
         generator.LinesProbability = LinesProbability;
         generator.NoiseProbability = NoiseProbability;

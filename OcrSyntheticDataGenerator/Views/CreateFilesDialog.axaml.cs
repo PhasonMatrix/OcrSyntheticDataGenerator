@@ -29,12 +29,21 @@ public partial class CreateFilesDialog : Window
             invertImageProbability);
 
 
-        List<string> comboBoxOptions = new List<string>();
+        List<string> textLayoutTypeComboBoxOptions = new List<string>();
+        foreach (LayoutFileType fileType in Enum.GetValues(typeof(LayoutFileType)))
+        {
+            textLayoutTypeComboBoxOptions.Add(fileType.GetType().GetMember(fileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
+        }
+        LayoutTypeComboBox.ItemsSource = textLayoutTypeComboBoxOptions;
+        LayoutTypeComboBox.SelectedIndex = 0;
+
+
+        List<string> dataFileTypeComboBoxOptions = new List<string>();
         foreach (DataFileType fileType in Enum.GetValues(typeof(DataFileType)))
         {
-            comboBoxOptions.Add(fileType.GetType().GetMember(fileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
+            dataFileTypeComboBoxOptions.Add(fileType.GetType().GetMember(fileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
         }
-        DataFileTypeComboBox.ItemsSource = comboBoxOptions;
+        DataFileTypeComboBox.ItemsSource = dataFileTypeComboBoxOptions;
         DataFileTypeComboBox.SelectedIndex = 0;
 
     }

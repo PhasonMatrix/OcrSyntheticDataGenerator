@@ -24,6 +24,7 @@ public class CreateFilesViewModel: ViewModelBase
     private int _pixelateProbability;
     private int _invertImageProbability;
     private string _comboBoxSaveDataFileType = "None";
+    private string _comboBoxTextLayoutType = "None";
     private double _progressBarValue;
     private string _status;
     private bool _isRunning;
@@ -42,6 +43,12 @@ public class CreateFilesViewModel: ViewModelBase
     {
         get => _outputDirectory;
         private set => this.RaiseAndSetIfChanged(ref _outputDirectory, value);
+    }
+
+    public string ComboBoxTextLayoutType
+    {
+        get => _comboBoxTextLayoutType;
+        private set => this.RaiseAndSetIfChanged(ref _comboBoxTextLayoutType, value);
     }
 
     public string ComboBoxSaveDataFileType
@@ -108,15 +115,28 @@ public class CreateFilesViewModel: ViewModelBase
         IsRunning = true;
         SetMouseCursorToWaiting();
 
-        DataFileType comboBoxSelection = DataFileType.None;
+
+        LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
+        foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
+        {
+            if (_comboBoxTextLayoutType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
+            {
+                layoutTypeComboBoxSelection = value;
+                break;
+            }
+        }
+
+        DataFileType dataFileTypeComboBoxSelection = DataFileType.None;
         foreach(DataFileType value in Enum.GetValues(typeof(DataFileType)))
         {
             if (_comboBoxSaveDataFileType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
             {
-                comboBoxSelection = value;
+                dataFileTypeComboBoxSelection = value;
                 break;
             }
         }
+
+
 
         int total = _numberOfFilesToGenerate; // make a copy in case the user changes number in UI control while we're running the loop.
         int i = 0;
@@ -128,7 +148,7 @@ public class CreateFilesViewModel: ViewModelBase
             }
             ProgressBarValue = (double)i / total * 100.0;
             StatusMessage = $"Status: Generating {i} of {total} files ...";
-            await Task.Run(() => GenerateFiles(comboBoxSelection));
+            await Task.Run(() => GenerateFiles(dataFileTypeComboBoxSelection));
         }
 
         if (i == total) // we reached the end without user cancelling
@@ -153,7 +173,35 @@ public class CreateFilesViewModel: ViewModelBase
     {
         var imageAndLabelsGuid = Guid.NewGuid();
         // create a new generator object each time
-        ImageAndLabelGeneratorBase generator = new ScatteredTextGenerator(650, 800);
+
+        LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
+        foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
+        {
+            if (_comboBoxTextLayoutType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
+            {
+                layoutTypeComboBoxSelection = value;
+                break;
+            }
+        }
+
+        int imageWidth = 700;
+        int imageHeight = 800;
+
+        ImageAndLabelGeneratorBase generator = null; // = new TableGenerator(700, 800); ; // new TableGenerator(650, 800);
+
+        switch (layoutTypeComboBoxSelection)
+        {
+
+            case LayoutFileType.ScatteredText:
+                generator = new ScatteredTextGenerator(imageWidth, imageHeight);
+                break;
+            case LayoutFileType.Paragraph:
+                generator = new ParagraphGenerator(imageWidth, imageHeight);
+                break;
+            case LayoutFileType.Table:
+                generator = new TableGenerator(imageWidth, imageHeight);
+                break;
+        }
         generator.BackgroundProbability = _backgroundProbability;
         generator.LinesProbability = _linesProbability;
         generator.NoiseProbability = _noiseProbability;

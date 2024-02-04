@@ -30,6 +30,12 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             [Description("JSON words and characters")] JsonWordsAndCharacters,
         };
 
+        public enum LayoutFileType
+        {
+            [Description("Scattered Text")] ScatteredText,
+            [Description("Paragraph")] Paragraph,
+            [Description("Table")] Table,
+        };
 
         protected int _imageWidth;
         protected int _imageHeight;

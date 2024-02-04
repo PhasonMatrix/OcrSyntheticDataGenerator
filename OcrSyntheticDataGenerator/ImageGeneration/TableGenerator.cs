@@ -37,7 +37,7 @@ public class TableGenerator : ImageAndLabelGeneratorBase
         int noisePercentage = _rnd.Next(1, 100);
 
         SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
-        byte textDarkness = (byte)_rnd.Next(190, 255);
+        byte textDarkness = (byte)_rnd.Next(200, 255);
         SKColor textColor = new SKColor(0x00, 0x00, 0x00, textDarkness);
         byte lineDarkness = (byte)_rnd.Next(50, 255);
         SKColor lineColor = new SKColor(lineDarkness, lineDarkness, lineDarkness);
