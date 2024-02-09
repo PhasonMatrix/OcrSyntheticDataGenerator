@@ -18,7 +18,7 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
 
     public override void Generate()
     {
-        int minFontHeight = 20;
+        int minFontHeight = 24;
         int maxFontHeight = 40;
         int minLines = 10;
         int maxLines = 30;

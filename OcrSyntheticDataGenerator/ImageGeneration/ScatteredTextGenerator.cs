@@ -18,8 +18,8 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
 
     public override void Generate()
     {
-        int minFontHeight = 22;
-        int maxFontHeight = 92;
+        int minFontHeight = 25;
+        int maxFontHeight = 72;
         int noisePercentage = _rnd.Next(1, 100);
 
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Media;
 using MsBox.Avalonia.Base;
 using SkiaSharp;
 
@@ -311,20 +312,56 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
         public string GetRandomFontName()
         {
+
+
+            var fonts = FontManager.Current.SystemFonts;
+
+            string fontList = "";
+            foreach (var font in fonts)
+            {
+                fontList += font.Name + ",\n";
+            }
+
+
             string[] fontNames = {
-                "Helvetica",
-                "Garamond",
-                "Futura",
+                "Arial",
+                "Bahnschrift",
                 "Bodoni MT",
                 "Calibri",
-                "Times New Roman",
-                "Arial",
                 "Cambria",
-                "Verdana",
-                "Franklin Gothic Demi",
-                "Courier New",
+                "Candara",
+                "Comic Sans MS",
                 "Consolas",
-                "Segoe UI"
+                "Constantia",
+                "Corbel",
+                "Courier New",
+                "Ebrima",
+                "Franklin Gothic",
+                "Franklin Gothic Demi",
+                "Futura",
+                "Garamond",
+                "Georgia",
+                "Helvetica",
+                "Leelawadee UI",
+                "Lucida Console",
+                "Malgun Gothic",
+                "MingLiU-ExtB",
+                "MingLiU_HKSCS-ExtB",
+                "MS Gothic",
+                "Segoe UI",
+                "NSimSun",
+                "Sitka Text",
+                "Sylfaen",
+                "Tahoma",
+                "Times New Roman",
+                "Trebuchet MS",
+                "Verdana",
+                "Yu Gothic",
+                "Book Antiqua",
+                "Baskerville Old Face",
+                "Bookman Old Style",
+                "Dubai",
+                "Gill Sans MT",
             };
             return fontNames[_random.Next(0, fontNames.Length)];
         }

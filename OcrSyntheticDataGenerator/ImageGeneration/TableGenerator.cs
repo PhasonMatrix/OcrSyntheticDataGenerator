@@ -21,7 +21,7 @@ public class TableGenerator : ImageAndLabelGeneratorBase
 
     public override void Generate()
     {
-        int minFontHeight = 20;
+        int minFontHeight = 24;
         int maxFontHeight = 30;
         int minRows = 1;
         int maxRows = 20;

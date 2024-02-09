@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Microsoft.CodeAnalysis.Diagnostics;
 using OcrSyntheticDataGenerator.ContentModel;
@@ -309,6 +310,15 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 {
                     int randomRotation = _rnd.Next(0, 55);
 
+                    double randomScale = _rnd.NextDouble() + 0.5;
+
+                    SKSizeI size = new SKSizeI();
+                    size.Width = (int)(backgroundImage.Width * randomScale);
+                    size.Height = (int)(backgroundImage.Height * randomScale);
+
+                    SKBitmap scaledBackgroundImage = backgroundImage.Resize(size, SKFilterQuality.Low);
+
+
                     // random tiling modes
                     SKShaderTileMode tileMode = SKShaderTileMode.Repeat;
                     if (_rnd.Next(1, 100) > 50)
@@ -318,18 +328,18 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
                     using (SKPaint paint = new SKPaint())
                     {
-                        paint.Shader = SKShader.CreateBitmap(backgroundImage, tileMode, tileMode);
+                        paint.Shader = SKShader.CreateBitmap(scaledBackgroundImage, tileMode, tileMode);
                         textCanvas.DrawRect(TextImage.Info.Rect, paint);
                     }
 
                     // get average darkness of background image
                     int totalLightness = 0;
                     int totalPixels = 0;
-                    for (int pxX = 0; pxX < backgroundImage.Info.Width; pxX += 1)
+                    for (int pxX = 0; pxX < scaledBackgroundImage.Info.Width; pxX += 1)
                     {
-                        for (int pxY = 0; pxY < backgroundImage.Info.Height; pxY += 1)
+                        for (int pxY = 0; pxY < scaledBackgroundImage.Info.Height; pxY += 1)
                         {
-                            totalLightness += backgroundImage.GetPixel(pxX, pxY).Red;
+                            totalLightness += scaledBackgroundImage.GetPixel(pxX, pxY).Red;
                             totalPixels++;
                         }
                     }
