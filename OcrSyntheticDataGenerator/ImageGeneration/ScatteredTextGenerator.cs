@@ -18,7 +18,7 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
 
     public override void Generate()
     {
-        int minFontHeight = 25;
+        int minFontHeight = 18;
         int maxFontHeight = 72;
         int noisePercentage = _rnd.Next(1, 100);
 
@@ -57,7 +57,7 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
 
 
             // add the text
-            int numberofTextElements = _rnd.Next(3, 22);
+            int numberofTextElements = _rnd.Next(10, 25);
 
             int i = 0;
             int failedAttempts = 0;
@@ -181,7 +181,7 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                 // draw the text on the image
                 if (isInverted)
                 {
-                    byte alpha = (byte)_rnd.Next(155, 255); 
+                    byte alpha = (byte)_rnd.Next(175, 255); 
                     textColor = new SKColor(255, 255, 255, alpha); // light text
                     DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
                 }

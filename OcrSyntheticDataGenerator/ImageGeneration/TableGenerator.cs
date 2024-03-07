@@ -21,34 +21,38 @@ public class TableGenerator : ImageAndLabelGeneratorBase
 
     public override void Generate()
     {
-        int minFontHeight = 24;
+        int minFontHeight = 18;
         int maxFontHeight = 30;
         int minRows = 1;
         int maxRows = 20;
         int minColumns = 2;
         int maxColumns = 4;
-        int minRowYPadding = 3;
+        int minRowYPadding = 2;
         int maxRowYPadding = 15;
+        int minTextYOffset = -4;
+        int maxTextYOffset = 4;
 
         int fontHeight = _rnd.Next(minFontHeight, maxFontHeight);
         int rowCount = _rnd.Next(minRows, maxRows);
         int columnCount = _rnd.Next(minColumns, maxColumns);
         int rowYPadding = _rnd.Next(minRowYPadding, maxRowYPadding);
+        int textYOffset = _rnd.Next(minTextYOffset, maxTextYOffset);
         int noisePercentage = _rnd.Next(1, 100);
 
         SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
         byte textDarkness = (byte)_rnd.Next(200, 255);
         SKColor textColor = new SKColor(0x00, 0x00, 0x00, textDarkness);
-        byte lineDarkness = (byte)_rnd.Next(50, 255);
+        byte lineDarkness = (byte)_rnd.Next(0, 150);
         SKColor lineColor = new SKColor(lineDarkness, lineDarkness, lineDarkness);
         byte stripedRowBackgroundAlpha = (byte)_rnd.Next(5, 80);
         SKColor stripeColor = new SKColor(0x00, 0x00, 0x00, stripedRowBackgroundAlpha);
 
 
         bool drawColumnLines = _rnd.Next(1, 100) < 80;
-        bool drawRowLines = _rnd.Next(1, 100) < 50;
+        //bool drawRowLines = _rnd.Next(1, 100) < 50;
+        int rowLineFrequency = _rnd.Next(0, 4);
         bool drawStripedRows = false;
-        if (!drawRowLines)
+        if (rowLineFrequency == 0)
         {
             drawStripedRows = _rnd.Next(1, 100) < 50;
         }
@@ -151,7 +155,7 @@ public class TableGenerator : ImageAndLabelGeneratorBase
             }
 
 
-            linePaint.IsAntialias = true;
+            linePaint.IsAntialias = false;
             linePaint.Color = lineColor;
             linePaint.Style = SKPaintStyle.Stroke;
             linePaint.StrokeWidth = _rnd.Next(1, 3);
@@ -175,10 +179,15 @@ public class TableGenerator : ImageAndLabelGeneratorBase
                     textCanvas.DrawRect(rowRect, stripePaint);
                 }
 
-
-                if (drawRowLines)
+                //if (drawRowLines)
+                if (rowLineFrequency > 0 && rowIndex % rowLineFrequency == 0)
                 {
                     textCanvas.DrawLine(tableLeft, row.Top, tableRight, row.Top, linePaint);
+                    //textCanvas.DrawLine(tableLeft, row.Bottom, tableRight, row.Bottom, linePaint);
+                }
+
+                if (rowLineFrequency > 0 && rowIndex == rows.Count - 1) // last row, draw bottom line
+                {
                     textCanvas.DrawLine(tableLeft, row.Bottom, tableRight, row.Bottom, linePaint);
                 }
 
@@ -240,7 +249,7 @@ public class TableGenerator : ImageAndLabelGeneratorBase
 
                     // text location
                     int textX = column.Left + column.XPadding;
-                    int yTextBaseline = row.Bottom - row.YPadding;
+                    int yTextBaseline = row.Bottom - row.YPadding + textYOffset;
                     // measure a rectangle to see if we can fit it on the image.
                     SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
                     SKPoint[] glyphPositions;

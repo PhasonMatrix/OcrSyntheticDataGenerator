@@ -100,6 +100,17 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             if (rand < 23) { return "\' "; }
             if (rand < 25) { return " \'"; }
             if (rand < 26) { return "! "; }
+            if (rand < 17) { return " – "; } // long dash
+            if (rand < 17) { return " ‘"; } // left single quote
+            if (rand < 17) { return "’ "; } // right single quote
+            if (rand < 17) { return " “"; } // left double quote
+            if (rand < 17) { return "” "; } // right double quote
+            if (rand < 26) { return "© "; } // copyright
+            if (rand < 26) { return "® "; } // registered trademark
+            if (rand < 26) { return "§ "; } // that 'section' thingy
+            if (rand < 26) { return " «"; } // left double angle
+            if (rand < 26) { return "» "; } // right double angle
+
 
             return " ";
         }
@@ -117,7 +128,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 if (randomType < 15)
                 {
                     // special character
-                    char[] specialChars = { '#', ':', '-', '/', '.', '(', ')', '[', ']', '!', '@', '$', '%', '&', '*', '?', ',', };
+                    char[] specialChars = { '#', ':', '-', '/', '.', '(', ')', '[', ']', '!', '@', '$', '%', '&', '*', '?', ',', '<', '>', '_' };
                     code += specialChars[_random.Next(0, specialChars.Length)];
                 }
                 else if (randomType < 40)

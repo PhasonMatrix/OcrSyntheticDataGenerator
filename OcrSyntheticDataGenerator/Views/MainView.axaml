@@ -3,8 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="850"
-			 MinWidth="1400" MinHeight="850"
+             mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="850"
+			 MinWidth="1600" MinHeight="850"
              x:Class="OcrSyntheticDataGenerator.Views.MainView"
              x:DataType="vm:MainViewModel" >
 	<Design.DataContext>

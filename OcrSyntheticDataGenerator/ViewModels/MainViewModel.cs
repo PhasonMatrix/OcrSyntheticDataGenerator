@@ -110,7 +110,7 @@ public class MainViewModel : ViewModelBase
             }
         }
 
-        int imageWidth = 700;
+        int imageWidth = 770;
         int imageHeight = 800;
 
         ImageAndLabelGeneratorBase generator = null;

@@ -2,7 +2,6 @@
 using Avalonia.Controls.Shapes;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
-using Microsoft.CodeAnalysis.Diagnostics;
 using OcrSyntheticDataGenerator.ContentModel;
 using SkiaSharp;
 using System;
@@ -95,8 +94,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             // blur
             if (BlurProbability >= _rnd.Next(1, 100))
             {
-                float xBlurAmount = _rnd.Next(85, 125) / 100;
-                float yBlurAmount = _rnd.Next(85, 125) / 100;
+                float xBlurAmount = _rnd.Next(90, 110) / 100;
+                float yBlurAmount = _rnd.Next(90, 110) / 100;
                 ImageProcessing.BlurImage(TextImage, xBlurAmount, yBlurAmount);
                 // darken if blured
                 ImageProcessing.DarkenImage(TextImage);
@@ -105,7 +104,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             // pixelate
             if (PixelateProbability >= _rnd.Next(1, 100))
             {
-                double pixelateAmount =  (_rnd.NextDouble() * 0.25) + 1.0; // 1.0 - 1.25
+                double pixelateAmount =  (_rnd.NextDouble() * 0.20) + 1.0; // 1.0 - 1.25
                 ImageProcessing.PixelateImage(TextImage, pixelateAmount);
             }
 
@@ -631,11 +630,11 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
                 SKRect croppedRect = new SKRect(
                     charRect.Left,
-                    charRect.Top + top,
+                    charRect.Top + top - (float)(charRect.Height * 0.05),
                     charRect.Right,
-                    charRect.Top + bottom
+                    charRect.Top + bottom + (float)(charRect.Height * 0.05)
+                    );
 
-                    ); 
                 return croppedRect;
             }
         }
