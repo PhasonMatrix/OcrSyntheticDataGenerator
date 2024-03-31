@@ -30,21 +30,31 @@ public partial class CreateFilesDialog : Window
 
 
         List<string> textLayoutTypeComboBoxOptions = new List<string>();
-        foreach (LayoutFileType fileType in Enum.GetValues(typeof(LayoutFileType)))
+        foreach (LayoutFileType layoutType in Enum.GetValues(typeof(LayoutFileType)))
         {
-            textLayoutTypeComboBoxOptions.Add(fileType.GetType().GetMember(fileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
+            textLayoutTypeComboBoxOptions.Add(layoutType.GetType().GetMember(layoutType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
         }
         LayoutTypeComboBox.ItemsSource = textLayoutTypeComboBoxOptions;
         LayoutTypeComboBox.SelectedIndex = 0;
 
 
         List<string> dataFileTypeComboBoxOptions = new List<string>();
-        foreach (DataFileType fileType in Enum.GetValues(typeof(DataFileType)))
+        foreach (DataFileType dataFileType in Enum.GetValues(typeof(DataFileType)))
         {
-            dataFileTypeComboBoxOptions.Add(fileType.GetType().GetMember(fileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
+            dataFileTypeComboBoxOptions.Add(dataFileType.GetType().GetMember(dataFileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
         }
         DataFileTypeComboBox.ItemsSource = dataFileTypeComboBoxOptions;
         DataFileTypeComboBox.SelectedIndex = 0;
+
+
+        List<string> characterNormalisationTypeComboBoxOptions = new List<string>();
+        foreach (CharacterBoxNormalisationType normalisationType in Enum.GetValues(typeof(CharacterBoxNormalisationType)))
+        {
+            characterNormalisationTypeComboBoxOptions.Add(normalisationType.GetType().GetMember(normalisationType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
+        }
+        CharacterImageNormalisationComboBox.ItemsSource = characterNormalisationTypeComboBoxOptions;
+        CharacterImageNormalisationComboBox.SelectedIndex = 0;
+
 
     }
 

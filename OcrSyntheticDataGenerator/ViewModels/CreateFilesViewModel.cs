@@ -24,12 +24,14 @@ public class CreateFilesViewModel: ViewModelBase
     private int _pixelateProbability;
     private int _invertImageProbability;
     private string _comboBoxSaveDataFileType = "None";
-    private string _comboBoxTextLayoutType = "None";
+    private string _comboBoxTextLayoutType = "Scattered Text";
+    private string _comboBoxCharacterBoxNormalisationType = "Stretch";
     private double _progressBarValue;
     private string _status;
     private bool _isRunning;
     private int _numberOfFilesToGenerate = 1000;
-    private string _outputDirectory = "C:\\OCR Source Images\\Generated Images and Labels\\";
+    private string _pageImageOutputDirectory = "C:\\OCR Source Images\\Generated Images and Labels\\";
+    private string _characterImageOutputDirectory = "C:\\OCR Source Images\\Generated Character Images\\";
 
     private Cursor _pointerCursor = Cursor.Default;
 
@@ -39,10 +41,16 @@ public class CreateFilesViewModel: ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _numberOfFilesToGenerate, value);
     }
 
-    public string OutputDirectory
+    public string PageImageOutputDirectory
     {
-        get => _outputDirectory;
-        private set => this.RaiseAndSetIfChanged(ref _outputDirectory, value);
+        get => _pageImageOutputDirectory;
+        private set => this.RaiseAndSetIfChanged(ref _pageImageOutputDirectory, value);
+    }
+
+    public string CharacterImageOutputDirectory
+    {
+        get => _characterImageOutputDirectory;
+        private set => this.RaiseAndSetIfChanged(ref _characterImageOutputDirectory, value);
     }
 
     public string ComboBoxTextLayoutType
@@ -56,6 +64,14 @@ public class CreateFilesViewModel: ViewModelBase
         get => _comboBoxSaveDataFileType;
         private set => this.RaiseAndSetIfChanged(ref _comboBoxSaveDataFileType, value);
     }
+
+
+    public string ComboBoxCharacterBoxNormalisationType
+    {
+        get => _comboBoxCharacterBoxNormalisationType;
+        private set => this.RaiseAndSetIfChanged(ref _comboBoxCharacterBoxNormalisationType, value);
+    }
+
 
     public Cursor PointerCursor
     {
@@ -106,7 +122,7 @@ public class CreateFilesViewModel: ViewModelBase
     public async void GenerateFilesButton_ClickCommand()
     {
         // check output dir exists
-        if (!Directory.Exists(OutputDirectory))
+        if (!Directory.Exists(PageImageOutputDirectory))
         {
             var result = MsBox.Avalonia.MessageBoxManager.GetMessageBoxStandard("Wrong!", "Output directory does not exist. Try again.", ButtonEnum.Ok).ShowAsync();
             return;
@@ -213,9 +229,9 @@ public class CreateFilesViewModel: ViewModelBase
         string imageFilename = $"{imageAndLabelsGuid}.png";
         string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
         string bboxDataFilenameWithoutExtension = $"{imageAndLabelsGuid}";
-        var imagesDirectoryPath = Path.Combine(OutputDirectory, "images");
-        var labelsDirectoryPath = Path.Combine(OutputDirectory, "labels");
-        var bboxDataDirectoryPath = Path.Combine(OutputDirectory, "bounding_boxes");
+        var imagesDirectoryPath = Path.Combine(PageImageOutputDirectory, "images");
+        var labelsDirectoryPath = Path.Combine(PageImageOutputDirectory, "labels");
+        var bboxDataDirectoryPath = Path.Combine(PageImageOutputDirectory, "bounding_boxes");
 
 
         if (!Directory.Exists(imagesDirectoryPath))

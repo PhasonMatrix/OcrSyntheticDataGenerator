@@ -37,6 +37,13 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             [Description("Table")] Table,
         };
 
+        public enum CharacterBoxNormalisationType
+        {
+            [Description("Stretch")] Stretch,
+            [Description("Include surrounding pixels")] IncludeSurroundingPixels,
+        };
+
+
         protected int _imageWidth;
         protected int _imageHeight;
         protected RandomTextGenerator _randomTextGenerator = new RandomTextGenerator();

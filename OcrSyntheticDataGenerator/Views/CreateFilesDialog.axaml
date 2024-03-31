@@ -4,8 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
 		xmlns:ig="clr-namespace:OcrSyntheticDataGenerator.ImageGeneration"
-        mc:Ignorable="d" d:DesignWidth="580" d:DesignHeight="500"
-		Width="580" Height="500"
+        mc:Ignorable="d" d:DesignWidth="580" d:DesignHeight="660"
+		Width="580" Height="660"
         x:Class="OcrSyntheticDataGenerator.Views.CreateFilesDialog"
 		x:DataType="vm:CreateFilesViewModel"
         Title="Create Files" 
@@ -15,61 +15,70 @@
 		<vm:CreateFilesViewModel />
 	</Design.DataContext>
 	
-	<StackPanel Width="500" HorizontalAlignment="Center">
+	<StackPanel Width="550" HorizontalAlignment="Center" Margin="5">
 
-		<Grid ColumnDefinitions="*, *" RowDefinitions="*,*,*" Margin="20">
+		<Border BorderBrush="#608" BorderThickness="1" CornerRadius="5" Padding="5" Margin="5">
+			<StackPanel>
+				<Grid ColumnDefinitions="*, *" RowDefinitions="*,*,*,*" Margin="10">
 
-			<Label Content="Text layout type:" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="10"/>
+					<Label Content="Create page image files:" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<CheckBox x:Name="CreatePageImagesCheckbox" Grid.Row="0" Grid.Column="1" Margin="5 0" >
+					</CheckBox>
 
-			<ComboBox x:Name="LayoutTypeComboBox"
-					  SelectedItem="{Binding ComboBoxTextLayoutType}"
-				      Margin="10"
-					  Width="240"
-					  Grid.Row="0" Grid.Column="1">
-			</ComboBox>
+					<Label Content="Text layout type:" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<ComboBox x:Name="LayoutTypeComboBox"
+							  SelectedItem="{Binding ComboBoxTextLayoutType}"
+							  Margin="5"
+							  Width="240"
+							  Grid.Row="1" Grid.Column="1">
+					</ComboBox>
 
-			<Label Content="Number of images:" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="10"/>
+					<Label Content="Number of images:" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<NumericUpDown x:Name="NumberOfImagesInputBox"
+									Value="{Binding NumberOfFilesToGenerate}"
+									Increment="100"
+									FormatString="0"
+									Margin="5"
+									Grid.Row="2" Grid.Column="1"/>
 
-			<NumericUpDown x:Name="NumberOfImagesInputBox"
-							Value="{Binding NumberOfFilesToGenerate}"
-							Increment="100"
-							FormatString="0"
-						    Margin="10"
-						    Grid.Row="1" Grid.Column="1"/>
+					<Label Content="Bounding box data files:" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<ComboBox x:Name="DataFileTypeComboBox"
+							  SelectedItem="{Binding ComboBoxSaveDataFileType}"
+							  Margin="5"
+							  Width="240"
+							  Grid.Row="3" Grid.Column="1">
+					</ComboBox>
+				</Grid>
 
-			<Label Content="Bounding box data files:" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="10"/>
+				<Label Content="Page image output directory:" Margin="10 0"/>
+				<TextBox Text="{Binding PageImageOutputDirectory}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="10 5" Width="500"/>
+				
+			</StackPanel>
+		</Border>
 
-			<ComboBox x:Name="DataFileTypeComboBox"
-					  SelectedItem="{Binding ComboBoxSaveDataFileType}"
-				      Margin="10"
-					  Width="240"
-					  Grid.Row="2" Grid.Column="1">
-			</ComboBox>
+		<Border BorderBrush="#038" BorderThickness="1" CornerRadius="5" Padding="5" Margin="5">
+			<StackPanel>
+				<Grid ColumnDefinitions="*, *" RowDefinitions="*,*" Margin="10">
 			
-		</Grid>
-		
-		
-		
-		<!--<Label Content="Number of images:" Margin="0 15 0 0"/>
-		
-		<NumericUpDown x:Name="NumberOfImagesInputBox"
-						Value="{Binding NumberOfFilesToGenerate}"
-						Increment="100"
-						FormatString="0"
-						Width="200"
-						HorizontalAlignment="Left"
-						Margin="0 15"/>
+					<Label Content="Create character image files:" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<CheckBox x:Name="CreateCharacterImagesCheckbox" Grid.Row="0" Grid.Column="1" Margin="5" >
+					</CheckBox>
 
-		<Label Content="Bounding box data files:" Margin="0 15 0 0"/>
-
-		<ComboBox x:Name="DataFileTypeComboBox" 
-				  SelectedItem="{Binding ComboBoxSaveDataFileType}" 
-				  Width="200" Margin="0 15" >
-		</ComboBox>-->
-
-		<Label Content="Output directory:" Margin="0 15 0 0"/>
-		<TextBox Text="{Binding OutputDirectory}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="0 15" Width="500"/>
+					<Label Content="Character Image Normalization:" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<ComboBox x:Name="CharacterImageNormalisationComboBox"
+							  SelectedItem="{Binding ComboBoxCharacterBoxNormalisationType}"
+							  Margin="5"
+							  Width="240"
+							  Grid.Row="1" Grid.Column="1">
+					</ComboBox>
+			
+				</Grid>
 		
+				<Label Content="Character image output directory:" Margin="10 0"/>
+				<TextBox Text="{Binding CharacterImageOutputDirectory}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="5 10" Width="500"/>
+			</StackPanel>
+		</Border>
+
 		<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
 			<Button x:Name="GenerateFilesButton" Margin="10 25" IsEnabled="{Binding !IsRunning}" Command="{Binding GenerateFilesButton_ClickCommand}" HorizontalContentAlignment="Center" Width="130">Generate Files</Button>
 			<Button x:Name="CancelButton" Margin="10 25" IsEnabled="{Binding IsRunning}" Command="{Binding CancelButton_ClickCommand}" HorizontalContentAlignment="Center" Width="130">Cancel</Button>
