@@ -16,6 +16,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
         public string GetRandomWord()
         {
+            
             string word;
 
             if (_random.Next(0, 10) > 2)
@@ -70,16 +71,31 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             int maxWordCount = _random.Next(minWords, maxWords);
             int wordCount = 0;
             string sentence = GetRandomWord();
-            while ((wordCount < maxWordCount))  //((sentence.Length + nextWord.Length + 2) <= 32 && (wordCount < maxWordCount))
+            while (wordCount < maxWordCount)
             {
-                //sentence += " " + GetRandomWord();
-                string punc = getRandomPunctuation();
-                string word = GetRandomWord();
-                if (punc == ". " || punc == "? " || punc == "! ") // capitalise first character
+                if (_random.Next(0, 100) < 95) // mostly just words
                 {
-                    word = word[0].ToString().ToUpper() + word.Substring(1);
+                    string punc = getRandomPunctuation();
+                    string word = GetRandomWord();
+                    if (punc == ". " || punc == "? " || punc == "! ") // capitalise first character
+                    {
+                        word = word[0].ToString().ToUpper() + word.Substring(1);
+                    }
+                    sentence += punc + word;
                 }
-                sentence += punc + word;
+                else // but sometimes email addresses or web addresses
+                {
+                    if (_random.Next(0, 100) < 50)
+                    {
+                        sentence += $" {GetRandomEmailAddress()} ";
+                    } 
+                    else
+                    {
+                        sentence += $" {GetRandomWebAddress()} ";
+                    }
+                }
+
+                
                 wordCount++;
             }
 
@@ -95,21 +111,22 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             if (rand < 15) { return ", "; }
             if (rand < 16) { return "? "; }
             if (rand < 17) { return "-"; }
-            if (rand < 19) { return "\" "; }
-            if (rand < 21) { return " \""; }
-            if (rand < 23) { return "\' "; }
-            if (rand < 25) { return " \'"; }
-            if (rand < 26) { return "! "; }
-            if (rand < 17) { return " – "; } // long dash
-            if (rand < 17) { return " ‘"; } // left single quote
-            if (rand < 17) { return "’ "; } // right single quote
-            if (rand < 17) { return " “"; } // left double quote
-            if (rand < 17) { return "” "; } // right double quote
-            if (rand < 26) { return "© "; } // copyright
-            if (rand < 26) { return "® "; } // registered trademark
-            if (rand < 26) { return "§ "; } // that 'section' thingy
-            if (rand < 26) { return " «"; } // left double angle
-            if (rand < 26) { return "» "; } // right double angle
+            if (rand < 18) { return "\" "; }
+            if (rand < 19) { return " \""; }
+            if (rand < 20) { return "\' "; }
+            if (rand < 21) { return " \'"; }
+            if (rand < 22) { return "! "; }
+            if (rand < 23) { return " – "; } // long dash
+            if (rand < 24) { return " ‘"; } // left single quote
+            if (rand < 25) { return "’ "; } // right single quote
+            if (rand < 26) { return " “"; } // left double quote
+            if (rand < 27) { return "” "; } // right double quote
+            if (rand < 28) { return "© "; } // copyright
+            if (rand < 29) { return "® "; } // registered trademark
+            if (rand < 30) { return "§ "; } // section sign
+            if (rand < 31) { return " «"; } // left double angle
+            if (rand < 32) { return "» "; } // right double angle
+            if (rand < 33) { return " | "; } // pipe
 
 
             return " ";
@@ -128,7 +145,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 if (randomType < 15)
                 {
                     // special character
-                    char[] specialChars = { '#', ':', '-', '/', '.', '(', ')', '[', ']', '!', '@', '$', '%', '&', '*', '?', ',', '<', '>', '_' };
+                    char[] specialChars = { '#', ':', '-', '+', '=', '_', '/', '.', '(', ')', '[', ']', '{', '}', '<', '>', '!', '@', '$', '%', '&', '*', '?', ',', '^' };
                     code += specialChars[_random.Next(0, specialChars.Length)];
                 }
                 else if (randomType < 40)
@@ -248,9 +265,16 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             string domainWord2 = GetRandomWord().Replace(".", "").Replace("'", "");
             string tld = GetRandomTld();
             string webAddress = $"www.{domainWord1}{domainWord2}.{tld}";
-            if (_random.Next(0, 100) < 20)
+            if (_random.Next(0, 100) < 50)
             {
-                webAddress = "https://" + webAddress;
+                if (_random.Next(0, 100) < 50)
+                {
+                    webAddress = "https://" + webAddress;
+                }
+                else
+                {
+                    webAddress = "http://" + webAddress;
+                }
             }
             webAddress = webAddress.ToLower();
             return webAddress;

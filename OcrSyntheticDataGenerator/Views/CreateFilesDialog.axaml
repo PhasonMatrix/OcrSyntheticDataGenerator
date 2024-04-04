@@ -22,7 +22,7 @@
 				<Grid ColumnDefinitions="*, *" RowDefinitions="*,*,*,*" Margin="10">
 
 					<Label Content="Create page image files:" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
-					<CheckBox x:Name="CreatePageImagesCheckbox" Grid.Row="0" Grid.Column="1" Margin="5 0" >
+					<CheckBox x:Name="CreatePageImagesCheckbox" IsChecked="{Binding CheckBoxOutputPageImageFiles}" Grid.Row="0" Grid.Column="1" Margin="5 0" >
 					</CheckBox>
 
 					<Label Content="Text layout type:" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
@@ -61,7 +61,7 @@
 				<Grid ColumnDefinitions="*, *" RowDefinitions="*,*" Margin="10">
 			
 					<Label Content="Create character image files:" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
-					<CheckBox x:Name="CreateCharacterImagesCheckbox" Grid.Row="0" Grid.Column="1" Margin="5" >
+					<CheckBox x:Name="CreateCharacterImagesCheckbox" IsChecked="{Binding CheckBoxOutputCharacterImageFiles}" Grid.Row="0" Grid.Column="1" Margin="5" >
 					</CheckBox>
 
 					<Label Content="Character Image Normalization:" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>

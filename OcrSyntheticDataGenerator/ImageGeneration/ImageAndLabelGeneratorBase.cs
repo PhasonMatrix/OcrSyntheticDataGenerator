@@ -878,5 +878,26 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
+
+
+        public void SaveCharacterImageFiles(string path, CharacterBoxNormalisationType normalisationType)
+        {
+
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+                if (contentArea is TextContentArea textContentArea)
+                {
+                    foreach (WordContentArea word in textContentArea.Words)
+                    {
+                        foreach (CharacterContentArea character in word.Characters)
+                        {
+                            string characterClass = CharacterClassDictionary.CharacterClasses[character.Symbol];
+                        }
+                    }
+                }
+            }
+        }
+
+
     }
 }

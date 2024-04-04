@@ -23,9 +23,13 @@ public class CreateFilesViewModel: ViewModelBase
     private int _blurProbability;
     private int _pixelateProbability;
     private int _invertImageProbability;
+    private int _pageImageWidth;
+    private int _pageImageHeight;
     private string _comboBoxSaveDataFileType = "None";
     private string _comboBoxTextLayoutType = "Scattered Text";
     private string _comboBoxCharacterBoxNormalisationType = "Stretch";
+    private bool _checkBoxOutputPageImageFiles = true;
+    private bool _checkBoxOutputCharacterImageFiles;
     private double _progressBarValue;
     private string _status;
     private bool _isRunning;
@@ -73,6 +77,19 @@ public class CreateFilesViewModel: ViewModelBase
     }
 
 
+    public bool CheckBoxOutputPageImageFiles
+    {
+        get { return _checkBoxOutputPageImageFiles; }
+        private set { this.RaiseAndSetIfChanged(ref _checkBoxOutputPageImageFiles, value); }
+    }
+
+
+    public bool CheckBoxOutputCharacterImageFiles
+    {
+        get { return _checkBoxOutputCharacterImageFiles; }
+        private set { this.RaiseAndSetIfChanged(ref _checkBoxOutputCharacterImageFiles, value); }
+    }
+
     public Cursor PointerCursor
     {
         get => _pointerCursor;
@@ -103,6 +120,8 @@ public class CreateFilesViewModel: ViewModelBase
     {}
 
     public CreateFilesViewModel(
+        int pageImageWidth,
+        int pageImageHeight,
         int linesProbability,
         int backgroundProbability,
         int noiseProbability,
@@ -116,6 +135,8 @@ public class CreateFilesViewModel: ViewModelBase
         _blurProbability = blurProbability;
         _pixelateProbability = pixelateProbability;
         _invertImageProbability = invertImageProbability;
+        _pageImageWidth = pageImageWidth;
+        _pageImageHeight = pageImageHeight;
     }
 
 
@@ -153,6 +174,16 @@ public class CreateFilesViewModel: ViewModelBase
         }
 
 
+        CharacterBoxNormalisationType characterBoxNormalisationType = CharacterBoxNormalisationType.Stretch;
+        foreach (CharacterBoxNormalisationType value in Enum.GetValues(typeof(CharacterBoxNormalisationType)))
+        {
+            if (_comboBoxCharacterBoxNormalisationType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
+            {
+                characterBoxNormalisationType = value;
+                break;
+            }
+        }
+
 
         int total = _numberOfFilesToGenerate; // make a copy in case the user changes number in UI control while we're running the loop.
         int i = 0;
@@ -187,8 +218,12 @@ public class CreateFilesViewModel: ViewModelBase
 
     private void GenerateFiles(DataFileType dataFileType)
     {
+        if (!_checkBoxOutputPageImageFiles && !_checkBoxOutputCharacterImageFiles)
+        {
+            return;
+        }
+
         var imageAndLabelsGuid = Guid.NewGuid();
-        // create a new generator object each time
 
         LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
         foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
@@ -200,22 +235,21 @@ public class CreateFilesViewModel: ViewModelBase
             }
         }
 
-        int imageWidth = 700;
-        int imageHeight = 800;
 
+        // create a new generator object each time
         ImageAndLabelGeneratorBase generator = null; // = new TableGenerator(700, 800); ; // new TableGenerator(650, 800);
 
         switch (layoutTypeComboBoxSelection)
         {
 
             case LayoutFileType.ScatteredText:
-                generator = new ScatteredTextGenerator(imageWidth, imageHeight);
+                generator = new ScatteredTextGenerator(_pageImageWidth, _pageImageHeight);
                 break;
             case LayoutFileType.Paragraph:
-                generator = new ParagraphGenerator(imageWidth, imageHeight);
+                generator = new ParagraphGenerator(_pageImageWidth, _pageImageHeight);
                 break;
             case LayoutFileType.Table:
-                generator = new TableGenerator(imageWidth, imageHeight);
+                generator = new TableGenerator(_pageImageWidth, _pageImageHeight);
                 break;
         }
         generator.BackgroundProbability = _backgroundProbability;
@@ -226,34 +260,47 @@ public class CreateFilesViewModel: ViewModelBase
         generator.InvertProbability = _invertImageProbability;
         generator.Generate();
 
-        string imageFilename = $"{imageAndLabelsGuid}.png";
-        string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
-        string bboxDataFilenameWithoutExtension = $"{imageAndLabelsGuid}";
-        var imagesDirectoryPath = Path.Combine(PageImageOutputDirectory, "images");
-        var labelsDirectoryPath = Path.Combine(PageImageOutputDirectory, "labels");
-        var bboxDataDirectoryPath = Path.Combine(PageImageOutputDirectory, "bounding_boxes");
 
 
-        if (!Directory.Exists(imagesDirectoryPath))
+        if (_checkBoxOutputPageImageFiles)
         {
-            Directory.CreateDirectory(imagesDirectoryPath);
-        }
-        if (!Directory.Exists(labelsDirectoryPath))
-        {
-            Directory.CreateDirectory(labelsDirectoryPath);
-        }
-        if (!Directory.Exists(bboxDataDirectoryPath))
-        {
-            Directory.CreateDirectory(bboxDataDirectoryPath);
+            string imageFilename = $"{imageAndLabelsGuid}.png";
+            string labelsFilename = $"{imageAndLabelsGuid}_labels.png";
+            string bboxDataFilenameWithoutExtension = $"{imageAndLabelsGuid}";
+            var imagesDirectoryPath = Path.Combine(PageImageOutputDirectory, "images");
+            var labelsDirectoryPath = Path.Combine(PageImageOutputDirectory, "labels");
+            var bboxDataDirectoryPath = Path.Combine(PageImageOutputDirectory, "bounding_boxes");
+
+            if (!Directory.Exists(imagesDirectoryPath))
+            {
+                Directory.CreateDirectory(imagesDirectoryPath);
+            }
+            if (!Directory.Exists(labelsDirectoryPath))
+            {
+                Directory.CreateDirectory(labelsDirectoryPath);
+            }
+            if (!Directory.Exists(bboxDataDirectoryPath))
+            {
+                Directory.CreateDirectory(bboxDataDirectoryPath);
+            }
+
+            string imageFileSavePath = Path.Combine(imagesDirectoryPath, imageFilename);
+            string labelsFileSavePath = Path.Combine(labelsDirectoryPath, labelsFilename);
+            string bboxFileSavePath = Path.Combine(bboxDataDirectoryPath, bboxDataFilenameWithoutExtension);
+
+            generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
+            generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
+            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, dataFileType);
         }
 
-        string imageFileSavePath = Path.Combine(imagesDirectoryPath, imageFilename);
-        string labelsFileSavePath = Path.Combine(labelsDirectoryPath, labelsFilename);
-        string bboxFileSavePath = Path.Combine(bboxDataDirectoryPath, bboxDataFilenameWithoutExtension);
 
-        generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
-        generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
-        generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, dataFileType);
+
+        if (_checkBoxOutputCharacterImageFiles)
+        {
+
+        }
+
+
     }
 
 

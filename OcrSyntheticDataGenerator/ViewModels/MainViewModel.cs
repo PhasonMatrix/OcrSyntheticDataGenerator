@@ -27,7 +27,12 @@ public class MainViewModel : ViewModelBase
     private int _pixelateProbability = 10;
     private int _invertImageProbability = 10;
 
+
+    private int _pageImageWidth = 770;
+    private int _pageImageHeight = 800;
+
     private string _comboBoxTextLayoutType = "Scattered Text";
+
 
     private Cursor _pointerCursor = new Cursor(StandardCursorType.Help);
 
@@ -110,21 +115,19 @@ public class MainViewModel : ViewModelBase
             }
         }
 
-        int imageWidth = 770;
-        int imageHeight = 800;
 
         ImageAndLabelGeneratorBase generator = null;
         
         switch (layoutTypeComboBoxSelection) {
 
             case LayoutFileType.ScatteredText:
-                generator = new ScatteredTextGenerator(imageWidth, imageHeight); 
+                generator = new ScatteredTextGenerator(_pageImageWidth, _pageImageHeight); 
                 break;
             case LayoutFileType.Paragraph:
-                generator = new ParagraphGenerator(imageWidth, imageHeight);
+                generator = new ParagraphGenerator(_pageImageWidth, _pageImageHeight);
                 break;
             case LayoutFileType.Table:
-                generator = new TableGenerator(imageWidth, imageHeight);
+                generator = new TableGenerator(_pageImageWidth, _pageImageHeight);
                 break;
         }
 
@@ -149,6 +152,8 @@ public class MainViewModel : ViewModelBase
     public async void GenerateFilesButton_ClickCommand()
     {
         CreateFilesDialog dialog = new CreateFilesDialog(
+            _pageImageWidth,
+            _pageImageHeight,
             _linesProbability,
             _backgroundProbability,
             _noiseProbability,

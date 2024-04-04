@@ -12,6 +12,8 @@ namespace OcrSyntheticDataGenerator.Views;
 public partial class CreateFilesDialog : Window
 {
     public CreateFilesDialog(
+        int pageImageWidth,
+        int pageImageHeight,
         int linesProbability,
         int backgroundProbability,
         int noiseProbability,
@@ -21,6 +23,8 @@ public partial class CreateFilesDialog : Window
     {
         InitializeComponent();
         DataContext = new CreateFilesViewModel(
+            pageImageWidth,
+            pageImageHeight,
             linesProbability,
             backgroundProbability,
             noiseProbability,
@@ -69,4 +73,7 @@ public partial class CreateFilesDialog : Window
         Close();
     }
 
+    private void Binding(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+    }
 }
