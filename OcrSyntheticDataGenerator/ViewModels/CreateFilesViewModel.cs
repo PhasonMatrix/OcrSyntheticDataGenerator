@@ -2,6 +2,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using MsBox.Avalonia.Enums;
 using OcrSyntheticDataGenerator.ImageGeneration;
+using OcrSyntheticDataGenerator.Util;
 using ReactiveUI;
 using SkiaSharp;
 using System;
@@ -153,38 +154,6 @@ public class CreateFilesViewModel: ViewModelBase
         SetMouseCursorToWaiting();
 
 
-        LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
-        foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
-        {
-            if (_comboBoxTextLayoutType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
-            {
-                layoutTypeComboBoxSelection = value;
-                break;
-            }
-        }
-
-        DataFileType dataFileTypeComboBoxSelection = DataFileType.None;
-        foreach(DataFileType value in Enum.GetValues(typeof(DataFileType)))
-        {
-            if (_comboBoxSaveDataFileType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
-            {
-                dataFileTypeComboBoxSelection = value;
-                break;
-            }
-        }
-
-
-        CharacterBoxNormalisationType characterBoxNormalisationType = CharacterBoxNormalisationType.Stretch;
-        foreach (CharacterBoxNormalisationType value in Enum.GetValues(typeof(CharacterBoxNormalisationType)))
-        {
-            if (_comboBoxCharacterBoxNormalisationType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
-            {
-                characterBoxNormalisationType = value;
-                break;
-            }
-        }
-
-
         int total = _numberOfFilesToGenerate; // make a copy in case the user changes number in UI control while we're running the loop.
         int i = 0;
         for (; i < total; i++)
@@ -195,7 +164,7 @@ public class CreateFilesViewModel: ViewModelBase
             }
             ProgressBarValue = (double)i / total * 100.0;
             StatusMessage = $"Status: Generating {i} of {total} files ...";
-            await Task.Run(() => GenerateFiles(dataFileTypeComboBoxSelection));
+            await Task.Run(() => GenerateFiles());
         }
 
         if (i == total) // we reached the end without user cancelling
@@ -216,7 +185,7 @@ public class CreateFilesViewModel: ViewModelBase
     }
 
 
-    private void GenerateFiles(DataFileType dataFileType)
+    private void GenerateFiles()
     {
         if (!_checkBoxOutputPageImageFiles && !_checkBoxOutputCharacterImageFiles)
         {
@@ -225,15 +194,10 @@ public class CreateFilesViewModel: ViewModelBase
 
         var imageAndLabelsGuid = Guid.NewGuid();
 
-        LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
-        foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
-        {
-            if (_comboBoxTextLayoutType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
-            {
-                layoutTypeComboBoxSelection = value;
-                break;
-            }
-        }
+
+        LayoutFileType layoutTypeComboBoxSelection = EnumUtils.ParseDescription<LayoutFileType>(_comboBoxTextLayoutType);
+        DataFileType dataFileTypeComboBoxSelection = EnumUtils.ParseDescription<DataFileType>(_comboBoxSaveDataFileType);
+        CharacterBoxNormalisationType characterBoxNormalisationType = EnumUtils.ParseDescription<CharacterBoxNormalisationType>(_comboBoxCharacterBoxNormalisationType);
 
 
         // create a new generator object each time
@@ -290,14 +254,14 @@ public class CreateFilesViewModel: ViewModelBase
 
             generator.SaveTextImage(imageFileSavePath, SKEncodedImageFormat.Png);
             generator.SaveLabelImage(labelsFileSavePath, SKEncodedImageFormat.Png);
-            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, dataFileType);
+            generator.SaveBoudingBoxesToTextFile(bboxFileSavePath, dataFileTypeComboBoxSelection);
         }
 
 
 
         if (_checkBoxOutputCharacterImageFiles)
         {
-
+            generator.SaveCharacterImageFiles(_characterImageOutputDirectory, characterBoxNormalisationType);
         }
 
 

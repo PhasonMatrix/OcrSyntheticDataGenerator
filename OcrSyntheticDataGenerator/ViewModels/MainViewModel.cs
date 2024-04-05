@@ -11,6 +11,7 @@ using static OcrSyntheticDataGenerator.ImageGeneration.ImageAndLabelGeneratorBas
 using OcrSyntheticDataGenerator.Views;
 using System.ComponentModel;
 using System.Reflection;
+using OcrSyntheticDataGenerator.Util;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
 
@@ -105,16 +106,7 @@ public class MainViewModel : ViewModelBase
     {
         SetMouseCursorToWaiting();
 
-        LayoutFileType layoutTypeComboBoxSelection = LayoutFileType.ScatteredText;
-        foreach (LayoutFileType value in Enum.GetValues(typeof(LayoutFileType)))
-        {
-            if (_comboBoxTextLayoutType == value.GetType().GetMember(value.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description)
-            {
-                layoutTypeComboBoxSelection = value;
-                break;
-            }
-        }
-
+        LayoutFileType layoutTypeComboBoxSelection = EnumUtils.ParseDescription<LayoutFileType>(_comboBoxTextLayoutType);
 
         ImageAndLabelGeneratorBase generator = null;
         

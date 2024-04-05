@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System;
 using System.Reflection;
+using OcrSyntheticDataGenerator.Util;
 
 namespace OcrSyntheticDataGenerator.Views;
 
@@ -19,11 +20,7 @@ public partial class MainView : UserControl
     {
         InitializeComponent();
 
-        List<string> textLayoutTypeComboBoxOptions = new List<string>();
-        foreach (LayoutFileType fileType in Enum.GetValues(typeof(LayoutFileType)))
-        {
-            textLayoutTypeComboBoxOptions.Add(fileType.GetType().GetMember(fileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
-        }
+        List<string> textLayoutTypeComboBoxOptions = EnumUtils.GetDescriptions<LayoutFileType>();
         LayoutTypeComboBox.ItemsSource = textLayoutTypeComboBoxOptions;
         LayoutTypeComboBox.SelectedIndex = 0;
     }

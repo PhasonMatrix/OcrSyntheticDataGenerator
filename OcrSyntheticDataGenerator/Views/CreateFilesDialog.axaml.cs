@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using OcrSyntheticDataGenerator.Util;
 using OcrSyntheticDataGenerator.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -33,32 +34,17 @@ public partial class CreateFilesDialog : Window
             invertImageProbability);
 
 
-        List<string> textLayoutTypeComboBoxOptions = new List<string>();
-        foreach (LayoutFileType layoutType in Enum.GetValues(typeof(LayoutFileType)))
-        {
-            textLayoutTypeComboBoxOptions.Add(layoutType.GetType().GetMember(layoutType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
-        }
+        List<string> textLayoutTypeComboBoxOptions = EnumUtils.GetDescriptions<LayoutFileType>();
         LayoutTypeComboBox.ItemsSource = textLayoutTypeComboBoxOptions;
         LayoutTypeComboBox.SelectedIndex = 0;
 
-
-        List<string> dataFileTypeComboBoxOptions = new List<string>();
-        foreach (DataFileType dataFileType in Enum.GetValues(typeof(DataFileType)))
-        {
-            dataFileTypeComboBoxOptions.Add(dataFileType.GetType().GetMember(dataFileType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
-        }
+        List<string> dataFileTypeComboBoxOptions = EnumUtils.GetDescriptions<DataFileType>();
         DataFileTypeComboBox.ItemsSource = dataFileTypeComboBoxOptions;
         DataFileTypeComboBox.SelectedIndex = 0;
 
-
-        List<string> characterNormalisationTypeComboBoxOptions = new List<string>();
-        foreach (CharacterBoxNormalisationType normalisationType in Enum.GetValues(typeof(CharacterBoxNormalisationType)))
-        {
-            characterNormalisationTypeComboBoxOptions.Add(normalisationType.GetType().GetMember(normalisationType.ToString())[0].GetCustomAttribute<DescriptionAttribute>().Description);
-        }
+        List<string> characterNormalisationTypeComboBoxOptions = EnumUtils.GetDescriptions<CharacterBoxNormalisationType>();
         CharacterImageNormalisationComboBox.ItemsSource = characterNormalisationTypeComboBoxOptions;
         CharacterImageNormalisationComboBox.SelectedIndex = 0;
-
 
     }
 
