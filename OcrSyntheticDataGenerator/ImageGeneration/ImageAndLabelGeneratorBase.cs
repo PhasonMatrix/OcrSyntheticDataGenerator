@@ -891,7 +891,22 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     {
                         foreach (CharacterContentArea character in word.Characters)
                         {
-                            string characterClass = CharacterClassDictionary.CharacterClasses[character.Symbol];
+                            
+                            // get the image of the character
+                            switch (normalisationType)
+                            {
+                                case CharacterBoxNormalisationType.Stretch:
+                                    SaveCharacterImageFileStretched(path, character);
+
+                                    break;
+                                case CharacterBoxNormalisationType.IncludeSurroundingPixels:
+                                    SaveCharacterImageFileIncludeSurroundingPixels(path, character);
+                                    break;
+                                default:
+                                    break;
+
+                            }
+
                         }
                     }
                 }
@@ -899,5 +914,55 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
+
+        private void SaveCharacterImageFileStretched(string baseSavePath, CharacterContentArea character)
+        {
+
+            // get the subimage for the character's rectangle
+            SKBitmap charImage = new SKBitmap(character.Rect.Width, character.Rect.Height,SKColorType.Gray8, SKAlphaType.Opaque);
+
+            TextImage.ExtractSubset(charImage, SKRectI.Inflate(character.Rect, 1, 1));
+
+            // resize
+            SKSizeI size = new SKSizeI(22, 22); // TODO: make size selectable/changeble
+            SKBitmap scaledCharacterImage = charImage.Resize(size, SKFilterQuality.High);
+
+            // save to file
+            SaveCharacterImage(baseSavePath, character, scaledCharacterImage);
+        }
+
+
+        private void SaveCharacterImageFileIncludeSurroundingPixels(string baseSavePath, CharacterContentArea character)
+        {
+
+            throw new NotImplementedException();
+
+        }
+
+
+        private void SaveCharacterImage(string baseSavePath, CharacterContentArea character, SKBitmap bitmap)
+        {
+            // get the training label class
+            string characterClass = CharacterClassDictionary.CharacterClasses[character.Symbol];
+
+
+            string saveDirectoryPath = System.IO.Path.Combine(baseSavePath, characterClass);
+
+            // create folder if not exists
+            if (!Directory.Exists(saveDirectoryPath))
+            {
+                Directory.CreateDirectory(saveDirectoryPath);
+            }
+
+            string fullPath = System.IO.Path.Combine(saveDirectoryPath, $"{Guid.NewGuid()}.png");
+
+            // write file
+            using (SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 100))
+            using (FileStream fileStream = File.OpenWrite(fullPath))
+            {
+                // save the data to a stream
+                data.SaveTo(fileStream);
+            }
+        }
     }
 }

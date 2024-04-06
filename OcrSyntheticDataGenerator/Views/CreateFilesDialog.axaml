@@ -17,6 +17,19 @@
 	
 	<StackPanel Width="550" HorizontalAlignment="Center" Margin="5">
 
+		<StackPanel Orientation="Horizontal">
+			<Label Content="Number of pages to generate:" HorizontalAlignment="Right" Margin="5"/>
+			<NumericUpDown x:Name="NumberOfImagesInputBox"
+							Value="{Binding NumberOfFilesToGenerate}"
+							Increment="100"
+						    Width="200"
+							FormatString="0"
+						    Minimum="0"
+							Margin="5"/>
+		</StackPanel>
+
+
+
 		<Border BorderBrush="#608" BorderThickness="1" CornerRadius="5" Padding="5" Margin="5">
 			<StackPanel>
 				<Grid ColumnDefinitions="*, *" RowDefinitions="*,*,*,*" Margin="10">
@@ -33,20 +46,13 @@
 							  Grid.Row="1" Grid.Column="1">
 					</ComboBox>
 
-					<Label Content="Number of images:" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
-					<NumericUpDown x:Name="NumberOfImagesInputBox"
-									Value="{Binding NumberOfFilesToGenerate}"
-									Increment="100"
-									FormatString="0"
-									Margin="5"
-									Grid.Row="2" Grid.Column="1"/>
 
-					<Label Content="Bounding box data files:" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
+					<Label Content="Bounding box data files:" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="5"/>
 					<ComboBox x:Name="DataFileTypeComboBox"
 							  SelectedItem="{Binding ComboBoxSaveDataFileType}"
 							  Margin="5"
 							  Width="240"
-							  Grid.Row="3" Grid.Column="1">
+							  Grid.Row="2" Grid.Column="1">
 					</ComboBox>
 				</Grid>
 
