@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using OcrSyntheticDataGenerator.ContentModel;
@@ -919,9 +920,45 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         {
 
             // get the subimage for the character's rectangle
-            SKBitmap charImage = new SKBitmap(character.Rect.Width, character.Rect.Height,SKColorType.Gray8, SKAlphaType.Opaque);
+            SKBitmap tempCharImage = new SKBitmap(character.Rect.Width, character.Rect.Height);
 
-            TextImage.ExtractSubset(charImage, SKRectI.Inflate(character.Rect, 1, 1));
+            SKRectI inflatedRect = SKRectI.Inflate(character.Rect, 1, 2);
+
+            TextImage.ExtractSubset(tempCharImage, inflatedRect);
+
+
+            // if the character is at the edge of the page, the subset won't be centred on the character, but will be offset.
+            // We need to calculate any offset then draw the temp bitmap onto the final bitmap.
+            // This is probably never going to happen but I'm writing the code here to apply to the other normalisation method "IncludeSurroundingPixels".
+
+            int xOffset = 0;
+            int yOffset = 0;
+            if (inflatedRect.Left < 0)   
+            { 
+                xOffset = - inflatedRect.Left - (character.Rect.Width / 2); 
+            }
+            if (inflatedRect.Right > TextImage.Width)  
+            { 
+                xOffset = (TextImage.Width - inflatedRect.Right) + (character.Rect.Width / 2); 
+            }
+            if (inflatedRect.Top < 0)    
+            { 
+                yOffset = - inflatedRect.Top - (character.Rect.Height / 2); 
+            }
+            if (inflatedRect.Bottom > TextImage.Height) 
+            { 
+                yOffset = (TextImage.Height - inflatedRect.Bottom) + (character.Rect.Height / 2);
+            }
+
+            SKBitmap charImage = new SKBitmap(inflatedRect.Width, inflatedRect.Height);
+            SKRectI drawLocation = new SKRectI(xOffset, yOffset, xOffset+inflatedRect.Width, yOffset+inflatedRect.Height);
+
+            using (SKCanvas charImageCanvas = new SKCanvas(charImage))
+            {
+                charImageCanvas.Clear(SKColors.Black);
+                charImageCanvas.DrawBitmap(tempCharImage, drawLocation);
+            }
+
 
             // resize
             SKSizeI size = new SKSizeI(22, 22); // TODO: make size selectable/changeble
@@ -935,7 +972,67 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         private void SaveCharacterImageFileIncludeSurroundingPixels(string baseSavePath, CharacterContentArea character)
         {
 
-            throw new NotImplementedException();
+            // get the subimage for the character's rectangle
+            SKBitmap tempCharImage = new SKBitmap(character.Rect.Width, character.Rect.Height);
+
+            // calcualate dimensions of a square 
+            int xInflateAmount = 0;
+            int yInflateAmount = 2;
+
+            if (character.Rect.Width < character.Rect.Height)
+            {
+                xInflateAmount = (character.Rect.Height - character.Rect.Width) / 2;
+            }
+
+            if (character.Rect.Width > character.Rect.Height)
+            {
+                yInflateAmount = (character.Rect.Width - character.Rect.Height) / 2;
+            }
+
+
+            SKRectI inflatedRect = SKRectI.Inflate(character.Rect, xInflateAmount, yInflateAmount);
+
+            TextImage.ExtractSubset(tempCharImage, inflatedRect);
+
+
+            // if the character is at the edge of the page, the subset won't be centred on the character, but will be offset.
+            // We need to calculate any offset then draw the temp bitmap onto the final bitmap.
+
+            int xOffset = 0;
+            int yOffset = 0;
+            if (inflatedRect.Left < 0)
+            {
+                xOffset = -inflatedRect.Left - (character.Rect.Width / 2);
+            }
+            if (inflatedRect.Right > TextImage.Width)
+            {
+                xOffset = (TextImage.Width - inflatedRect.Right) + (character.Rect.Width / 2);
+            }
+            if (inflatedRect.Top < 0)
+            {
+                yOffset = -inflatedRect.Top - (character.Rect.Height / 2);
+            }
+            if (inflatedRect.Bottom > TextImage.Height)
+            {
+                yOffset = (TextImage.Height - inflatedRect.Bottom) + (character.Rect.Height / 2);
+            }
+
+            SKBitmap charImage = new SKBitmap(inflatedRect.Width, inflatedRect.Height);
+            SKRectI drawLocation = new SKRectI(xOffset, yOffset, xOffset + inflatedRect.Width, yOffset + inflatedRect.Height);
+
+            using (SKCanvas charImageCanvas = new SKCanvas(charImage))
+            {
+                charImageCanvas.Clear(SKColors.Black);
+                charImageCanvas.DrawBitmap(tempCharImage, drawLocation);
+            }
+
+
+            // resize
+            SKSizeI size = new SKSizeI(22, 22); // TODO: make size selectable/changeble
+            SKBitmap scaledCharacterImage = charImage.Resize(size, SKFilterQuality.High);
+
+            // save to file
+            SaveCharacterImage(baseSavePath, character, scaledCharacterImage);
 
         }
 

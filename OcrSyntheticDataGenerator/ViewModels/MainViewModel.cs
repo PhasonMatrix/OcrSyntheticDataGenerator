@@ -134,6 +134,7 @@ public class MainViewModel : ViewModelBase
 
         LeftBitmap = SKBitmapToAvaloniaBitmap(generator.TextImage);
         RightBitmap = SKBitmapToAvaloniaBitmap(generator.HeatMapImage);
+        //RightBitmap = SKBitmapToAvaloniaBitmap(generator.CharacterBoxImage);
 
         SetMouseCursorToDefault();
     }

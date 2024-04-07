@@ -117,7 +117,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             {'»', "symbol_guillemet_right"},
             {'©', "symbol_copyright"},
             {'®', "symbol_registration_mark"},
-            {'§', "symbol_section_sign"}
+            {'§', "symbol_section_sign"},
+            {'–', "symbol_long_dash"}
         };
 
     }
