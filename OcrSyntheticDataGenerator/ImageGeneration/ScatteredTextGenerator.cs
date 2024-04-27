@@ -63,9 +63,6 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
             int failedAttempts = 0;
             while (i < numberofTextElements)
             {
-                // text content
-                string text = _randomTextGenerator.GetRandomText();
-
 
                 // random visual attributes
                 bool isInverted = _rnd.Next(0, 100) < 20;
@@ -74,10 +71,16 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                 int fontHeight = _rnd.Next(minFontHeight, maxFontHeight);
 
 
+                // measure a rectangle to see if we can fit it on the image.
+                SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
+
+                // text content
+                string text = _randomTextGenerator.GetRandomText(font);
+
+
                 // choose a location
                 int x = _rnd.Next(0, _imageWidth / 2);
                 int yTextBaseline = _rnd.Next(0, _imageHeight) + fontHeight;
-
 
 
                 // just a heuristic. if it's a long string, give it a better chance of making it onto the image
@@ -86,8 +89,6 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                     x = 5;
                 }
 
-                // measure a rectangle to see if we can fit it on the image.
-                SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
 
                 SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
                 SKPoint[] glyphPositions;
@@ -185,9 +186,9 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                     textColor = new SKColor(255, 255, 255, alpha); // light text
                     DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
                 }
-                else
+                else  // dark text on light/no background
                 {
-                    byte alpha = (byte)_rnd.Next(155, 255); // dark text
+                    byte alpha = (byte)_rnd.Next(100, 255);
                     if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
                     {
                         alpha = (byte)_rnd.Next(200, 255);
@@ -199,7 +200,7 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                     if (backgroundImagePercentage <= BackgroundProbability) // if any background
                     {
                         // clamp the darkness. we don't want the text to be too light on a dark background
-                        if (alpha < 230) { alpha = 255; }
+                        if (alpha < 200) { alpha = 255; }
                     }
                     textColor = new SKColor(0x00, 0x00, 0x00, alpha);
                     DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);

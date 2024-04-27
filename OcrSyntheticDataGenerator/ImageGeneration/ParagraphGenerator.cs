@@ -30,9 +30,24 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
         int lineSpace = _rnd.Next(minLineSpace, maxLineSpace);
         int noisePercentage = _rnd.Next(1, 100);
         bool isRightJustified = _rnd.Next(1, 100) > 90;
+        int backgroundImagePercentage = _rnd.Next(1, 100);
 
         SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
-        byte alpha = (byte)_rnd.Next(155, 255);
+        byte alpha = (byte)_rnd.Next(120, 255);
+        if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
+        {
+            alpha = (byte)_rnd.Next(200, 255);
+            // clamp to less than 256
+            if (alpha > 255) { alpha = 255; }
+
+        }
+        //if (hasDarkBackgroundImage)
+        if (backgroundImagePercentage <= BackgroundProbability) // if any background
+        {
+            // clamp the darkness. we don't want the text to be too light on a dark background
+            if (alpha < 200) { alpha = 255; }
+        }
+
         SKColor textColor = new SKColor(0x00, 0x00, 0x00, alpha);
 
 
@@ -54,7 +69,6 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
 
 
             // add backgound texture image
-            int backgroundImagePercentage = _rnd.Next(1, 100);
             if (backgroundImagePercentage <= BackgroundProbability)
             {
                 DrawBackgroundImage(textCanvas);
@@ -67,11 +81,11 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
             for (int lineIndex = 0; lineIndex < lineCount; lineIndex++)
             {
 
-                string text = _randomTextGenerator.GetRandomTextLine(3, 6);
+                string text = _randomTextGenerator.GetRandomTextLine(font, 3, 6);
 
                 if (fontHeight < 15) // more words if small text
                 {
-                    text = _randomTextGenerator.GetRandomTextLine(5, 12);
+                    text = _randomTextGenerator.GetRandomTextLine(font, 5, 12);
                 }
 
 

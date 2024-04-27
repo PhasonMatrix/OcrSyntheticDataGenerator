@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Avalonia.Media;
 using MsBox.Avalonia.Base;
@@ -52,21 +53,31 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
-        public string GetRandomText()
+        public string GetRandomText(SKFont font)
         {
             int percentChance = _random.Next(0, 100);
+            string text = "";
 
-            if (percentChance < 10) return GetRandomAlphaNumericCode();
-            else if (percentChance < 20) return GetRandomNumber();
-            else if (percentChance < 30) return GetRandomDate();
-            else if (percentChance < 35) return GetRandomEmailAddress();
-            else if (percentChance < 40) return GetRandomWebAddress();
-            else return GetRandomTextLine();
+            if (percentChance < 10) text = GetRandomAlphaNumericCode();
+            else if (percentChance < 20) text = GetRandomNumber();
+            else if (percentChance < 30) text = GetRandomDate();
+            else if (percentChance < 35) text = GetRandomEmailAddress();
+            else if (percentChance < 40) text = GetRandomWebAddress();
+            else text = GetRandomTextLine(font);
+
+            // double check the font contains all glyphs
+            if (!font.ContainsGlyphs(text))
+            {
+                Debug.WriteLine("This font can't draw every glyph for this text");
+                return "";
+            }
+
+            return text;
         }
 
 
 
-        public string GetRandomTextLine(int minWords = 1, int maxWords = 10)
+        public string GetRandomTextLine(SKFont font, int minWords = 1, int maxWords = 10)
         {
             int maxWordCount = _random.Next(minWords, maxWords);
             int wordCount = 0;
@@ -75,7 +86,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             {
                 if (_random.Next(0, 100) < 95) // mostly just words
                 {
-                    string punc = getRandomPunctuation();
+                    string punc = getRandomPunctuation(font);
                     string word = GetRandomWord();
                     if (punc == ". " || punc == "? " || punc == "! ") // capitalise first character
                     {
@@ -87,11 +98,11 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 {
                     if (_random.Next(0, 100) < 50)
                     {
-                        sentence += $" {GetRandomEmailAddress()} ";
+                        sentence += $" {GetRandomEmailAddress()}";
                     } 
                     else
                     {
-                        sentence += $" {GetRandomWebAddress()} ";
+                        sentence += $" {GetRandomWebAddress()}";
                     }
                 }
 
@@ -103,31 +114,49 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
-        public string getRandomPunctuation()
+        public string getRandomPunctuation(SKFont font)
         {
-            int rand = _random.Next(0, 100);
+            string punctuation = " ";
 
-            if (rand < 10) { return ". "; }
-            if (rand < 15) { return ", "; }
-            if (rand < 16) { return "? "; }
-            if (rand < 17) { return "-"; }
-            if (rand < 18) { return "\" "; }
-            if (rand < 19) { return " \""; }
-            if (rand < 20) { return "\' "; }
-            if (rand < 21) { return " \'"; }
-            if (rand < 22) { return "! "; }
-            if (rand < 23) { return " – "; } // long dash
-            if (rand < 24) { return " ‘"; } // left single quote
-            if (rand < 25) { return "’ "; } // right single quote
-            if (rand < 26) { return " “"; } // left double quote
-            if (rand < 27) { return "” "; } // right double quote
-            if (rand < 28) { return "© "; } // copyright
-            if (rand < 29) { return "® "; } // registered trademark
-            if (rand < 30) { return "§ "; } // section sign
-            if (rand < 31) { return " «"; } // left double angle
-            if (rand < 32) { return "» "; } // right double angle
-            if (rand < 33) { return " | "; } // pipe
+            // font may not have a glyph for that character
+            // try up to x times, then give up
+            int retry = 0;
+            while (retry < 5)
+            {
+                int rand = _random.Next(0, 110);
 
+                if (rand < 20) { punctuation = ". "; }
+                else if (rand < 30) { punctuation = ", "; }
+                else if (rand < 35) { punctuation = "? "; }
+                else if (rand < 40) { punctuation = "-"; }
+                else if (rand < 45) { punctuation = "\" "; }
+                else if (rand < 50) { punctuation = " \""; }
+                else if (rand < 55) { punctuation = "\' "; }
+                else if (rand < 60) { punctuation = " \'"; }
+                else if (rand < 65) { punctuation = "! "; }
+                else if (rand < 70) { punctuation = " – "; } // long dash
+                else if (rand < 80) { punctuation = " ‘"; }  // left single quote
+                else if (rand < 85) { punctuation = "’ "; }  // right single quote
+                else if (rand < 90) { punctuation = " “"; }  // left double quote
+                else if (rand < 95) { punctuation = "” "; }  // right double quote
+                else if (rand < 96) { punctuation = "© "; }  // copyright
+                else if (rand < 97) { punctuation = "® "; }  // registered trademark
+                else if (rand < 98) { punctuation = "§ "; }  // section sign
+                else if (rand < 99) { punctuation = " «"; }  // left double angle
+                else if (rand < 100) { punctuation = "» "; }  // right double angle
+                else if (rand < 101) { punctuation = " | "; }  // pipe
+                else { punctuation = " "; } // default
+
+                if (font.ContainsGlyphs(punctuation))
+                {
+                    return punctuation;
+                }
+                else
+                {
+                    Debug.WriteLine($"Font '{font.Typeface.FamilyName}' does not contain glyph: {punctuation}");
+                }
+                retry++;
+            }
 
             return " ";
         }
@@ -256,8 +285,8 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             string emailAddress = $"{firstName}.{lastName}@{domain}.{tld}";
             emailAddress = emailAddress.ToLower();
             return emailAddress;
-
         }
+
 
         public string GetRandomWebAddress()
         {
@@ -340,7 +369,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 fs = SKFontStyle.Italic;
             }
             SKTypeface tf = SKTypeface.FromFamilyName(GetRandomFontName(), fs);
-
             return new SKFont(tf, fontSize);
         }
 
@@ -358,46 +386,71 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             }
 
 
+
+
             string[] fontNames = {
                 "Arial",
                 "Bahnschrift",
+                "Baskerville Old Face",
                 "Bodoni MT",
+                "Book Antiqua",
+                "Bookman Old Style",
                 "Calibri",
+                "Calisto MT",
                 "Cambria",
                 "Candara",
+                "Cascadia Code",
+                "Centaur",
+                "Century",
+                "Century Schoolbook",
                 "Comic Sans MS",
                 "Consolas",
                 "Constantia",
                 "Corbel",
                 "Courier New",
+                "Dubai",
                 "Ebrima",
+                "Eras ITC",
+                "Fira Mono",
+                "Footlight MT",
                 "Franklin Gothic",
                 "Franklin Gothic Demi",
-                "Futura",
-                "Garamond",
+                "Gabriola",
+                "Gadugi",
                 "Georgia",
+                "Gill Sans MT",
                 "Helvetica",
                 "Leelawadee UI",
                 "Lucida Console",
+                "Lucida Sans",
+                "Lucida Sans Typewriter",
+                "Maiandra GD",
                 "Malgun Gothic",
+                "Microsoft JhengHei",
                 "MingLiU-ExtB",
                 "MingLiU_HKSCS-ExtB",
                 "MS Gothic",
-                "Segoe UI",
+                "MS Reference Sans Serif",
                 "NSimSun",
+                "Nirmala UI",
+                "OCR A",
+                "Palatino Linotype",
+                "Perfect DOS VGA 437 Win",
+                "Rockwell",
+                "Segoe UI",
                 "Sitka Text",
                 "Sylfaen",
                 "Tahoma",
                 "Times New Roman",
                 "Trebuchet MS",
+                "Tw Cen MT",
                 "Verdana",
                 "Yu Gothic",
-                "Book Antiqua",
-                "Baskerville Old Face",
-                "Bookman Old Style",
-                "Dubai",
-                "Gill Sans MT",
             };
+
+            // test bad font name
+            //return "not a font"; // results in default typeface 'Segeo UI'.
+
             return fontNames[_random.Next(0, fontNames.Length)];
         }
 

@@ -21,7 +21,7 @@ public class TableGenerator : ImageAndLabelGeneratorBase
 
     public override void Generate()
     {
-        int minFontHeight = 18;
+        int minFontHeight = 16;
         int maxFontHeight = 30;
         int minRows = 1;
         int maxRows = 20;
@@ -38,9 +38,24 @@ public class TableGenerator : ImageAndLabelGeneratorBase
         int rowYPadding = _rnd.Next(minRowYPadding, maxRowYPadding);
         int textYOffset = _rnd.Next(minTextYOffset, maxTextYOffset);
         int noisePercentage = _rnd.Next(1, 100);
+        int backgroundImagePercentage = _rnd.Next(1, 100);
 
         SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
-        byte textDarkness = (byte)_rnd.Next(200, 255);
+        byte textDarkness = (byte)_rnd.Next(120, 255);
+        if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
+        {
+            textDarkness = (byte)_rnd.Next(200, 255);
+            // clamp to less than 256
+            if (textDarkness > 255) { textDarkness = 255; }
+
+        }
+        //if (hasDarkBackgroundImage)
+        if (backgroundImagePercentage <= BackgroundProbability) // if any background
+        {
+            // clamp the darkness. we don't want the text to be too light on a dark background
+            if (textDarkness < 200) { textDarkness = 255; }
+        }
+
         SKColor textColor = new SKColor(0x00, 0x00, 0x00, textDarkness);
         byte lineDarkness = (byte)_rnd.Next(0, 150);
         SKColor lineColor = new SKColor(lineDarkness, lineDarkness, lineDarkness);
@@ -148,7 +163,6 @@ public class TableGenerator : ImageAndLabelGeneratorBase
 
 
             // add backgound texture image
-            int backgroundImagePercentage = _rnd.Next(1, 100);
             if (backgroundImagePercentage <= BackgroundProbability)
             {
                 DrawBackgroundImage(textCanvas);
