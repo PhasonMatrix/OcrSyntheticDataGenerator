@@ -16,10 +16,12 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
         : base(imageWidth, imageHeight)
     { }
 
-    public override void Generate()
+
+
+    public override void GenerateContent()
     {
-        int minFontHeight = 16;
-        int maxFontHeight = 30;
+        int minFontHeight = 17;
+        int maxFontHeight = 38;
         int minLines = 10;
         int maxLines = 30;
         int minLineSpace = 0;
@@ -28,78 +30,65 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
         int fontHeight = _rnd.Next(minFontHeight, maxFontHeight);
         int lineCount = _rnd.Next(minLines, maxLines);
         int lineSpace = _rnd.Next(minLineSpace, maxLineSpace);
-        int noisePercentage = _rnd.Next(1, 100);
         bool isRightJustified = _rnd.Next(1, 100) > 90;
-        int backgroundImagePercentage = _rnd.Next(1, 100);
-
         SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
-        byte alpha = (byte)_rnd.Next(120, 255);
-        if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
+
+        // ---- lines of text ----
+
+        for (int lineIndex = 0; lineIndex < lineCount; lineIndex++)
         {
-            alpha = (byte)_rnd.Next(200, 255);
-            // clamp to less than 256
-            if (alpha > 255) { alpha = 255; }
+            string text = _randomTextGenerator.GetRandomTextLine(font, 2, 5);
 
-        }
-        //if (hasDarkBackgroundImage)
-        if (backgroundImagePercentage <= BackgroundProbability) // if any background
-        {
-            // clamp the darkness. we don't want the text to be too light on a dark background
-            if (alpha < 200) { alpha = 255; }
-        }
-
-        SKColor textColor = new SKColor(0x00, 0x00, 0x00, alpha);
-
-
-        // set up canvas objects for each image
-        using (SKCanvas textCanvas = new SKCanvas(TextImage))
-        using (SKCanvas labelCanvas = new SKCanvas(LabelImage))
-        using (SKCanvas heatMapCanvas = new SKCanvas(HeatMapImage))
-        using (SKCanvas characterBoxCanvas = new SKCanvas(CharacterBoxImage))
-        {
-
-
-            // draw image backgrounds
-            textCanvas.Clear(SKColors.White);
-            labelCanvas.Clear(SKColors.Black);
-            heatMapCanvas.Clear(SKColors.Blue);
-            characterBoxCanvas.Clear(SKColors.White);
-
-
-
-
-            // add backgound texture image
-            if (backgroundImagePercentage <= BackgroundProbability)
+            if (fontHeight < 20) // more words if small text
             {
-                DrawBackgroundImage(textCanvas);
+                text = _randomTextGenerator.GetRandomTextLine(font, 5, 10);
             }
 
 
+            // choose text location
+            int x = 5;
+            int yTextBaseline = (lineIndex + 1) * (fontHeight + lineSpace);
 
-            // ---- lines of text ----
+            // measure a rectangle to see if we can fit it on the image.
+            SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
+            SKPoint[] glyphPositions;
+            float[] glyphWidths;
+            float measuredWidth = 0;
+            SKFontMetrics fontMetrics;
 
-            for (int lineIndex = 0; lineIndex < lineCount; lineIndex++)
+            using (SKPaint paint = new SKPaint(font))
             {
+                paint.IsAntialias = true;
+                paint.Color = SKColors.Black;
+                paint.StrokeWidth = 1;
+                measuredWidth = paint.MeasureText(text, ref measureBounds);
+                glyphPositions = paint.GetGlyphPositions(text, new SKPoint(x, yTextBaseline));
+                glyphWidths = paint.GetGlyphWidths(text);
+                fontMetrics = paint.FontMetrics;
+            }
 
-                string text = _randomTextGenerator.GetRandomTextLine(font, 3, 6);
 
-                if (fontHeight < 15) // more words if small text
-                {
-                    text = _randomTextGenerator.GetRandomTextLine(font, 5, 12);
-                }
+            int y = (int)(yTextBaseline - fontMetrics.CapHeight - 5);
+
+            SKRectI measureRect = new SKRectI(
+               x,
+               y,
+               x + (int)measuredWidth,
+               y + fontHeight
+               );
 
 
-                // choose text location
-                int x = 5;
-                int yTextBaseline = (lineIndex + 1) * (fontHeight + lineSpace);
+            if (measureRect.Right > _imageWidth - 5 || measureRect.Bottom > _imageHeight - 5)
+            {
+                continue; // we couldn't fit this on the image
+            }
 
-                // measure a rectangle to see if we can fit it on the image.
-                SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
-                SKPoint[] glyphPositions;
-                float[] glyphWidths;
-                float measuredWidth = 0;
-                SKFontMetrics fontMetrics;
 
+            if (isRightJustified)
+            {
+                x = _imageWidth - (int)measureRect.Width - 5;
+                measureRect.Left = x;
+                // re-calculate the character boxes
                 using (SKPaint paint = new SKPaint(font))
                 {
                     paint.IsAntialias = true;
@@ -110,95 +99,59 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
                     glyphWidths = paint.GetGlyphWidths(text);
                     fontMetrics = paint.FontMetrics;
                 }
-
-
-                int y = (int)(yTextBaseline - fontMetrics.CapHeight - 5);
-
-                SKRect measureRect = new SKRect(
-                   x,
-                   y,
-                   x + measuredWidth,
-                   y + fontHeight + 3
-                   );
-
-
-                if (measureRect.Right > _imageWidth - 5 || measureRect.Bottom > _imageHeight - 5)
-                {
-                    continue; // we couldn't fit this on the image
-                }
-
-
-                if (isRightJustified)
-                {
-                    x = _imageWidth - (int)measureRect.Width - 5;
-                    measureRect.Left = x;
-                    // re-calculate the character boxes
-                    using (SKPaint paint = new SKPaint(font))
-                    {
-                        paint.IsAntialias = true;
-                        paint.Color = SKColors.Black;
-                        paint.StrokeWidth = 1;
-                        measuredWidth = paint.MeasureText(text, ref measureBounds);
-                        glyphPositions = paint.GetGlyphPositions(text, new SKPoint(x, yTextBaseline));
-                        glyphWidths = paint.GetGlyphWidths(text);
-                        fontMetrics = paint.FontMetrics;
-                    }
-                }
-
-
-                TextContentArea currentTextContentArea = new TextContentArea
-                {
-                    Rect = RectToRectI(measureRect),
-                    Text = text
-                };
-
-
-                // construct the character boxes from the previously measured positions and widths;
-                SKRect[] characterBoxes = ConstructCharacterBoundingBoxes(text, glyphPositions, glyphWidths, measureRect);
-
-
-                // measure and crop character box top and bottom
-                SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes);
-
-
-                List<WordContentArea> words = CreateWordAndCharacterObjects(text, croppedCharacterBoxes);
-                currentTextContentArea.Words = words;
-                _contentAreas.Add(currentTextContentArea);
-
-
-
-
-                // draw text on main image
-                DrawTextOnCanvas(textCanvas, text, x, yTextBaseline, font, textColor);
-
-
-                // draw data on the other images. bounding boxes, labels, heatmap, etc.
-
-
-                // draw text on heatmap
-                DrawLabels(
-                    font, 
-                    labelCanvas, 
-                    heatMapCanvas, 
-                    characterBoxCanvas, 
-                    text, 
-                    x, 
-                    yTextBaseline, 
-                    croppedCharacterBoxes, 
-                    words);
-
             }
 
+            List<WordContentArea> words = ConstructWordAndCharacterObjects(font, text, yTextBaseline, glyphPositions, glyphWidths, fontMetrics, measureRect, false);
 
-            // ---- post processing ----
-            PostProcessing(noisePercentage);
+            TextContentArea currentTextContentArea = new TextContentArea
+            {
+                Rect = RectToRectI(measureRect),
+                Text = text
+            };
 
+            
+            currentTextContentArea.Words = words;
+            _contentAreas.Add(currentTextContentArea);
 
         }
-
-
-
     }
+
+
+
+
+
+    public override void DrawContent()
+    {
+        using (SKCanvas textCanvas = new SKCanvas(TextImage))
+        {
+            //textCanvas.Clear(SKColors.White);
+
+            byte alpha = (byte)_rnd.Next(120, 255);
+
+            if (HasBackgroundTexture)
+            {
+                // clamp the darkness. we don't want the text to be too light on a dark background
+                if (alpha < 200) { alpha = 255; }
+            }
+
+            SKColor textColor = new SKColor(0x00, 0x00, 0x00, alpha);
+
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+                if (contentArea is TextContentArea phrase)
+                {
+                    foreach (WordContentArea word in phrase.Words)
+                    {
+                        bool isUnderlined = (word.Text.Contains("www") || (word.Text.Contains("@") && word.Text.Contains("."))) && (_rnd.Next(1, 100) < 80);
+
+                        DrawTextOnCanvas(textCanvas, word, textColor, isUnderlined);
+                    }
+                }
+            }
+        }
+    }
+
+
 
 
 

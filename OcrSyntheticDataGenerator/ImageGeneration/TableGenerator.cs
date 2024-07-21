@@ -14,13 +14,24 @@ namespace OcrSyntheticDataGenerator.ImageGeneration;
 
 public class TableGenerator : ImageAndLabelGeneratorBase
 {
+
+    List<TableRow> _rows = new List<TableRow>();
+    List<TableColumn> _columns = new List<TableColumn>();
+    int _tableLeft;
+    int _tableRight;
+    int _tableTop;
+    int _tableBottom;
+
+
     public TableGenerator(int imageWidth, int imageHeight)
         : base(imageWidth, imageHeight)
     { }
 
 
-    public override void Generate()
+
+    public override void GenerateContent()
     {
+
         int minFontHeight = 16;
         int maxFontHeight = 30;
         int minRows = 1;
@@ -37,49 +48,14 @@ public class TableGenerator : ImageAndLabelGeneratorBase
         int columnCount = _rnd.Next(minColumns, maxColumns);
         int rowYPadding = _rnd.Next(minRowYPadding, maxRowYPadding);
         int textYOffset = _rnd.Next(minTextYOffset, maxTextYOffset);
-        int noisePercentage = _rnd.Next(1, 100);
-        int backgroundImagePercentage = _rnd.Next(1, 100);
 
         SKFont font = _randomTextGenerator.GetRandomFont(fontHeight);
-        byte textDarkness = (byte)_rnd.Next(120, 255);
-        if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
-        {
-            textDarkness = (byte)_rnd.Next(200, 255);
-            // clamp to less than 256
-            if (textDarkness > 255) { textDarkness = 255; }
-
-        }
-        //if (hasDarkBackgroundImage)
-        if (backgroundImagePercentage <= BackgroundProbability) // if any background
-        {
-            // clamp the darkness. we don't want the text to be too light on a dark background
-            if (textDarkness < 200) { textDarkness = 255; }
-        }
-
-        SKColor textColor = new SKColor(0x00, 0x00, 0x00, textDarkness);
-        byte lineDarkness = (byte)_rnd.Next(0, 150);
-        SKColor lineColor = new SKColor(lineDarkness, lineDarkness, lineDarkness);
-        byte stripedRowBackgroundAlpha = (byte)_rnd.Next(5, 80);
-        SKColor stripeColor = new SKColor(0x00, 0x00, 0x00, stripedRowBackgroundAlpha);
-
-
-        bool drawColumnLines = _rnd.Next(1, 100) < 80;
-        //bool drawRowLines = _rnd.Next(1, 100) < 50;
-        int rowLineFrequency = _rnd.Next(0, 4);
-        bool drawStripedRows = false;
-        if (rowLineFrequency == 0)
-        {
-            drawStripedRows = _rnd.Next(1, 100) < 50;
-        }
-
 
 
         // ----    set up rows and columns    ----
-        List<TableRow> rows = new List<TableRow>();
-        List<TableColumn> columns = new List<TableColumn>();
 
-        int tableLeft = _rnd.Next(5, 20);
-        int previousRight = tableLeft;
+        _tableLeft = _rnd.Next(5, 20);
+        int previousRight = _tableLeft;
         for (int c = 0; c < columnCount; c++)
         {
             TableColumn column = new TableColumn();
@@ -104,16 +80,13 @@ public class TableGenerator : ImageAndLabelGeneratorBase
             column.Left = previousRight;
             column.Right = column.Left + column.Width;
             previousRight = column.Right;
-            columns.Add(column);
+            _columns.Add(column);
         }
-        int tableRight = previousRight;
+        _tableRight = previousRight;
 
 
-
-
-
-        int tableTop = _rnd.Next(5, 40);
-        int previousBottom = tableTop;
+        _tableTop = _rnd.Next(5, 40);
+        int previousBottom = _tableTop;
         // most of the time, have a header row, but not every time
         if (_rnd.Next(1, 100) < 90)
         {
@@ -124,7 +97,7 @@ public class TableGenerator : ImageAndLabelGeneratorBase
             headerRow.Height = fontHeight + headerRow.YPadding; // (headerRow.YPadding * 2);
             headerRow.Bottom = headerRow.Top + headerRow.Height;
             previousBottom = headerRow.Bottom;
-            rows.Add(headerRow);
+            _rows.Add(headerRow);
         }
 
 
@@ -136,38 +109,174 @@ public class TableGenerator : ImageAndLabelGeneratorBase
             row.Height = fontHeight + row.YPadding; // (headerRow.YPadding * 2);
             row.Bottom = row.Top + row.Height;
             previousBottom = row.Bottom;
-            rows.Add(row);
+            _rows.Add(row);
+        }
+        _tableBottom = previousBottom;
+
+
+        for (int rowIndex = 0; rowIndex < _rows.Count; rowIndex++)
+        {
+            TableRow row = _rows[rowIndex];
+
+
+            foreach (TableColumn column in _columns)
+            {
+                SKRect columnRect = new SKRect();
+                columnRect.Left = column.Left;
+                columnRect.Top = _tableTop;
+                columnRect.Right = column.Right;
+                columnRect.Bottom = _tableBottom;
+
+
+
+                // cell text
+
+                string text = "";
+                if (row.IsHeaderRow)
+                {
+                    text = _randomTextGenerator.GetRandomWord();
+                }
+                else
+                {
+                    switch (column.ValueType)
+                    {
+                        case ColumnmValueType.Date:
+                            text = _randomTextGenerator.GetRandomDate(column.Format);
+                            break;
+
+                        case ColumnmValueType.DollarAmount:
+                            text = _randomTextGenerator.GetRandomNumber();
+                            break;
+
+                        case ColumnmValueType.Quantity:
+                            text = _rnd.Next(0, 15).ToString();
+                            break;
+
+                        case ColumnmValueType.Code:
+                            text = _randomTextGenerator.GetRandomAlphaNumericCode();
+                            break;
+
+                        case ColumnmValueType.Text:
+                            text = _randomTextGenerator.GetRandomWord();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+
+                // text location
+                int textX = column.Left + column.XPadding;
+                int yTextBaseline = row.Bottom - row.YPadding + textYOffset;
+                // measure a rectangle to see if we can fit it on the image.
+                SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
+                SKPoint[] glyphPositions;
+                float[] glyphWidths;
+                float measuredWidth = 0;
+                SKFontMetrics fontMetrics;
+
+                using (SKPaint paint = new SKPaint(font))
+                {
+                    paint.IsAntialias = true;
+                    paint.Color = SKColors.Black;
+                    paint.StrokeWidth = 1;
+                    measuredWidth = paint.MeasureText(text, ref measureBounds);
+                    glyphPositions = paint.GetGlyphPositions(text, new SKPoint(textX, yTextBaseline));
+                    glyphWidths = paint.GetGlyphWidths(text);
+                    fontMetrics = paint.FontMetrics;
+                }
+
+                int y = (int)(yTextBaseline - fontMetrics.CapHeight - 5);
+
+                SKRectI measureRect = new SKRectI(
+                   textX,
+                   y,
+                   textX + (int)measuredWidth,
+                   y + fontHeight
+                   );
+
+                if (column.TextJustified == Justified.Right)
+                {
+                    textX = column.Right - (int)measureRect.Width - column.XPadding;
+                    measureRect.Left = textX;
+                    // re-calculate the character boxes
+                    using (SKPaint paint = new SKPaint(font))
+                    {
+                        paint.IsAntialias = true;
+                        paint.Color = SKColors.Black;
+                        paint.StrokeWidth = 1;
+                        measuredWidth = paint.MeasureText(text, ref measureBounds);
+                        glyphPositions = paint.GetGlyphPositions(text, new SKPoint(textX, yTextBaseline));
+                        glyphWidths = paint.GetGlyphWidths(text);
+                        fontMetrics = paint.FontMetrics;
+                    }
+                }
+
+
+                // check fits in the cell rect. If I fits, I sits, otherwise I continue.
+                SKRect cellRect = new SKRect(column.Left - 2, row.Top - 20, column.Right + 2, row.Bottom + 20);
+                if (!RectangleFitsInside(measureRect, cellRect))
+                {
+                    continue;
+                }
+
+
+                TextContentArea currentTextContentArea = new TextContentArea
+                {
+                    Rect = RectToRectI(measureRect),
+                    Text = text
+                };
+
+
+                List<WordContentArea> words = ConstructWordAndCharacterObjects(font, text, yTextBaseline, glyphPositions, glyphWidths, fontMetrics, measureRect, false);
+
+                currentTextContentArea.Words = words;
+                _contentAreas.Add(currentTextContentArea);
+
+            }
+
         }
 
-        int tableBottom = previousBottom;
+    }
 
 
 
-
-
-
-        // set up canvas objects for each image
+    public override void DrawContent()
+    {
         using (SKCanvas textCanvas = new SKCanvas(TextImage))
-        using (SKCanvas labelCanvas = new SKCanvas(LabelImage))
-        using (SKCanvas heatMapCanvas = new SKCanvas(HeatMapImage))
-        using (SKCanvas characterBoxCanvas = new SKCanvas(CharacterBoxImage))
         using (SKPaint linePaint = new SKPaint())
         using (SKPaint stripePaint = new SKPaint())
         {
+            //textCanvas.Clear(SKColors.White);
 
-            // draw image backgrounds
-            textCanvas.Clear(SKColors.White);
-            labelCanvas.Clear(SKColors.Black);
-            heatMapCanvas.Clear(SKColors.Blue);
-            characterBoxCanvas.Clear(SKColors.White);
-
-
-            // add backgound texture image
-            if (backgroundImagePercentage <= BackgroundProbability)
+            byte textDarkness = (byte)_rnd.Next(120, 255);
+            if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
             {
-                DrawBackgroundImage(textCanvas);
+                textDarkness = (byte)_rnd.Next(200, 255);
+                // clamp to less than 256
+                if (textDarkness > 255) { textDarkness = 255; }
             }
 
+            if (HasBackgroundTexture)
+            {
+                // clamp the darkness. we don't want the text to be too light on a dark background
+                if (textDarkness < 200) { textDarkness = 255; }
+            }
+
+            SKColor textColor = new SKColor(0x00, 0x00, 0x00, textDarkness);
+            byte lineDarkness = (byte)_rnd.Next(0, 150);
+            SKColor lineColor = new SKColor(lineDarkness, lineDarkness, lineDarkness);
+            byte stripedRowBackgroundAlpha = (byte)_rnd.Next(5, 80);
+            SKColor stripeColor = new SKColor(0x00, 0x00, 0x00, stripedRowBackgroundAlpha);
+
+
+            bool drawColumnLines = _rnd.Next(1, 100) < 80;
+            int rowLineFrequency = _rnd.Next(0, 4);
+            bool drawStripedRows = false;
+            if (rowLineFrequency == 0)
+            {
+                drawStripedRows = _rnd.Next(1, 100) < 50;
+            }
 
             linePaint.IsAntialias = false;
             linePaint.Color = lineColor;
@@ -179,184 +288,81 @@ public class TableGenerator : ImageAndLabelGeneratorBase
             stripePaint.Style = SKPaintStyle.Fill;
 
 
-            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
-            {
-                TableRow row = rows[rowIndex];
 
-                if (drawStripedRows && rowIndex % 2 > 0)
-                {
-                    SKRect rowRect = new SKRect();
-                    rowRect.Left = tableLeft;
-                    rowRect.Top = row.Top;
-                    rowRect.Right = tableRight;
-                    rowRect.Bottom = row.Bottom;
-                    textCanvas.DrawRect(rowRect, stripePaint);
-                }
+
+            // draw column and row colours
+            for (int rowIndex = 0; rowIndex < _rows.Count; rowIndex++)
+            {
+                TableRow row = _rows[rowIndex];
+     
 
                 //if (drawRowLines)
                 if (rowLineFrequency > 0 && rowIndex % rowLineFrequency == 0)
                 {
-                    textCanvas.DrawLine(tableLeft, row.Top, tableRight, row.Top, linePaint);
-                    //textCanvas.DrawLine(tableLeft, row.Bottom, tableRight, row.Bottom, linePaint);
+                    textCanvas.DrawLine(_tableLeft, row.Top, _tableRight, row.Top, linePaint);
                 }
 
-                if (rowLineFrequency > 0 && rowIndex == rows.Count - 1) // last row, draw bottom line
+                if (rowLineFrequency > 0 && rowIndex == _rows.Count - 1) // last row, draw bottom line
                 {
-                    textCanvas.DrawLine(tableLeft, row.Bottom, tableRight, row.Bottom, linePaint);
+                    textCanvas.DrawLine(_tableLeft, row.Bottom, _tableRight, row.Bottom, linePaint);
                 }
 
-
-
-                foreach (TableColumn column in columns)
+                foreach (TableColumn column in _columns)
                 {
                     SKRect columnRect = new SKRect();
                     columnRect.Left = column.Left;
-                    columnRect.Top = tableTop;
+                    columnRect.Top = _tableTop;
                     columnRect.Right = column.Right;
-                    columnRect.Bottom = tableBottom;
+                    columnRect.Bottom = _tableBottom;
 
 
                     if (drawColumnLines)
                     {
-                        textCanvas.DrawLine(column.Left, tableTop, column.Left, tableBottom, linePaint);
-                        textCanvas.DrawLine(column.Right, tableTop, column.Right, tableBottom, linePaint);
-                    }
-                    
-
-                    // cell text
-
-
-                    string text = "";
-                    if (row.IsHeaderRow)
-                    {
-                        text = _randomTextGenerator.GetRandomWord();
-                    }
-                    else
-                    {
-                        switch (column.ValueType)
-                        {
-                            case ColumnmValueType.Date:
-                                text = _randomTextGenerator.GetRandomDate(column.Format);
-                                break;
-
-                            case ColumnmValueType.DollarAmount:
-                                text = _randomTextGenerator.GetRandomNumber();
-                                break;
-
-                            case ColumnmValueType.Quantity:
-                                text = _rnd.Next(0, 15).ToString();
-                                break;
-
-                            case ColumnmValueType.Code:
-                                text = _randomTextGenerator.GetRandomAlphaNumericCode();
-                                break;
-
-                            case ColumnmValueType.Text:
-                                text = _randomTextGenerator.GetRandomWord();
-                                break;
-                            default:
-                                break;
-                        }
+                        textCanvas.DrawLine(column.Left, _tableTop, column.Left, _tableBottom, linePaint);
+                        textCanvas.DrawLine(column.Right, _tableTop, column.Right, _tableBottom, linePaint);
                     }
 
-
-
-                    // text location
-                    int textX = column.Left + column.XPadding;
-                    int yTextBaseline = row.Bottom - row.YPadding + textYOffset;
-                    // measure a rectangle to see if we can fit it on the image.
-                    SKRect measureBounds = new SKRect(0, 0, _imageWidth, _imageHeight);
-                    SKPoint[] glyphPositions;
-                    float[] glyphWidths;
-                    float measuredWidth = 0;
-                    SKFontMetrics fontMetrics;
-
-                    using (SKPaint paint = new SKPaint(font))
-                    {
-                        paint.IsAntialias = true;
-                        paint.Color = SKColors.Black;
-                        paint.StrokeWidth = 1;
-                        measuredWidth = paint.MeasureText(text, ref measureBounds);
-                        glyphPositions = paint.GetGlyphPositions(text, new SKPoint(textX, yTextBaseline));
-                        glyphWidths = paint.GetGlyphWidths(text);
-                        fontMetrics = paint.FontMetrics;
-                    }
-
-                    int y = (int)(yTextBaseline - fontMetrics.CapHeight - 5);
-
-                    SKRect measureRect = new SKRect(
-                       textX,
-                       y,
-                       textX + measuredWidth,
-                       y + fontHeight + 3
-                       );
-
-                    if (column.TextJustified == Justified.Right)
-                    {
-                        textX = column.Right - (int)measureRect.Width - column.XPadding;
-                        measureRect.Left = textX;
-                        // re-calculate the character boxes
-                        using (SKPaint paint = new SKPaint(font))
-                        {
-                            paint.IsAntialias = true;
-                            paint.Color = SKColors.Black;
-                            paint.StrokeWidth = 1;
-                            measuredWidth = paint.MeasureText(text, ref measureBounds);
-                            glyphPositions = paint.GetGlyphPositions(text, new SKPoint(textX, yTextBaseline));
-                            glyphWidths = paint.GetGlyphWidths(text);
-                            fontMetrics = paint.FontMetrics;
-                        }
-                    }
-
-
-                    // check fits in the cell rect. If I fits, I sits, otherwise I continue.
-                    SKRect cellRect = new SKRect(column.Left - 2, row.Top - 20, column.Right + 2, row.Bottom + 20);
-                    if (!RectangleFitsInside(measureRect, cellRect))
-                    {
-                        continue;
-                    }
-
-
-                    TextContentArea currentTextContentArea = new TextContentArea
-                    {
-                        Rect = RectToRectI(measureRect),
-                        Text = text
-                    };
-
-                    // construct the character boxes from the previously measured positions and widths;
-                    SKRect[] characterBoxes = ConstructCharacterBoundingBoxes(text, glyphPositions, glyphWidths, measureRect);
-
-
-                    // measure and crop character box top and bottom
-                    SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes);
-
-
-                    List<WordContentArea> words = CreateWordAndCharacterObjects(text, croppedCharacterBoxes);
-                    currentTextContentArea.Words = words;
-                    _contentAreas.Add(currentTextContentArea);
-
-                    // draw text on main image
-                    DrawTextOnCanvas(textCanvas, text, textX, yTextBaseline, font, textColor);
-
-                    // draw text on heatmap
-                    DrawLabels(
-                        font,
-                        labelCanvas,
-                        heatMapCanvas,
-                        characterBoxCanvas,
-                        text,
-                        textX,
-                        yTextBaseline,
-                        croppedCharacterBoxes,
-                        words);
 
                 }
+
+
             }
 
 
-            // ---- post processing ----
-            PostProcessing(noisePercentage);
+
+
+            // draw cell text
+
+            byte alpha = (byte)_rnd.Next(120, 255);
+
+            if (HasBackgroundTexture)
+            {
+                // clamp the darkness. we don't want the text to be too light on a dark background
+                if (alpha < 200) { alpha = 255; }
+            }
+
+
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+                if (contentArea is TextContentArea phrase)
+                {
+                    bool isInverted = _rnd.Next(0, 100) < 20;
+                    bool isLightText = _rnd.Next(0, 100) < 10;
+                    bool isBoxAroundText = _rnd.Next(0, 100) < 20;
+
+                    foreach (WordContentArea word in phrase.Words)
+                    {
+                        if (word.Text != null)
+                        {
+                            bool isUnderlined = (word.Text.Contains("www") || (word.Text.Contains("@") && word.Text.Contains("."))) && (_rnd.Next(1, 100) < 80);
+                            DrawTextOnCanvas(textCanvas, word, textColor, isUnderlined);
+                        }
+                    }
+                }
+            }
         }
 
     }
+
+
 }

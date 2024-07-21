@@ -11,7 +11,9 @@ namespace OcrSyntheticDataGenerator.ContentModel
     public class ContentArea
     {
         [JsonIgnore]
-        public SKRectI Rect { get; set; } // SKRectI for integer rectangle. SKRect for float rectangle.
+        public SKRectI Rect { get; set; }
+
+        public bool IsInverted { get; set; }
 
         [JsonPropertyName("Rect")]
         public SerializerRect SerializerRect

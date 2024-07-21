@@ -3,8 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:OcrSyntheticDataGenerator.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="850"
-			 MinWidth="1600" MinHeight="850"
+             mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
+			 MinWidth="1600" MinHeight="900"
              x:Class="OcrSyntheticDataGenerator.Views.MainView"
              x:DataType="vm:MainViewModel" >
 	<Design.DataContext>
@@ -15,7 +15,6 @@
 	
 	<Grid>
 		<DockPanel LastChildFill="False" >
-			
 		
 			<StackPanel DockPanel.Dock="Left" Width="220" Margin="5">
 
@@ -24,8 +23,7 @@
 				<ComboBox x:Name="LayoutTypeComboBox"
 						  SelectedItem="{Binding ComboBoxTextLayoutType}"
 						  Margin="5"
-						  Width="210" >
-				</ComboBox>
+						  Width="210" />
 				
 				
 				<Label Content="Random content" FontWeight="Bold" Padding="0 10"/>
@@ -78,14 +76,23 @@
 				<Slider x:Name="InvertImageSlider" Value="{Binding InvertImageProbability}" Maximum="100" Width="200"/>
 
 
-
-
 				<Separator Margin="1 10"/>
 				
 				<Button Name="PreviewButton" Margin="5 14" IsEnabled="True" Command="{Binding PreviewButton_ClickCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">Preview</Button>
-
 				<Button x:Name="GenerateFilesButton" Margin="5 14" IsEnabled="True" Command="{Binding GenerateFilesButton_ClickCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">Generate Files</Button>
 
+				<Label Content="Left Image" Padding="0 10"/>
+				<ComboBox x:Name="LeftImageComboBox"
+						  SelectedItem="{Binding ComboBoxLeftImageSelection}"
+						  Margin="5"
+						  Width="210" />
+					
+				<Label Content="Right Image" Padding="0 10"/>
+				<ComboBox x:Name="RightImageComboBox"
+							SelectedItem="{Binding ComboBoxRightImageSelection}"
+							Margin="5"
+							Width="210" />
+				
 			</StackPanel>
 			<Grid ColumnDefinitions="1*, 1*" RowDefinitions="Auto" Margin="4">
 				<Border  BorderBrush="#222" BorderThickness="1" CornerRadius="5" Padding="4" Grid.Row="0" Grid.Column="0" Margin="5">

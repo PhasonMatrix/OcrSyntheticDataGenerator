@@ -12,6 +12,8 @@ using OcrSyntheticDataGenerator.Views;
 using System.ComponentModel;
 using System.Reflection;
 using OcrSyntheticDataGenerator.Util;
+using Avalonia.Controls;
+using System.Reflection.Emit;
 
 namespace OcrSyntheticDataGenerator.ViewModels;
 
@@ -29,12 +31,24 @@ public class MainViewModel : ViewModelBase
     private int _invertImageProbability = 10;
 
 
-    private int _pageImageWidth = 770;
-    private int _pageImageHeight = 800;
+    private int _pageImageWidth = 512;
+    private int _pageImageHeight = 512;
 
     private string _comboBoxTextLayoutType = "Scattered Text";
+    private string _comboBoxLeftImageSelection = "Bounding Box";
+    private string _comboBoxRightImageSelection = "Labels";
 
 
+    public enum DisplayImageType
+    {
+        [Description("Text")] Text,
+        [Description("Bounding Box")] BoundingBox,
+        [Description("Labels")] Labels,
+        [Description("Heat Map")] HeatMap,
+    };
+
+
+    private ImageAndLabelGeneratorBase _generator = null;
     private Cursor _pointerCursor = new Cursor(StandardCursorType.Help);
 
 
@@ -94,6 +108,26 @@ public class MainViewModel : ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _comboBoxTextLayoutType, value);
     }
 
+    public string ComboBoxLeftImageSelection
+    {
+        get => _comboBoxLeftImageSelection;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _comboBoxLeftImageSelection, value);
+            DisplayLeftImage();
+        }
+    }
+
+    public string ComboBoxRightImageSelection
+    {
+        get => _comboBoxRightImageSelection;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _comboBoxRightImageSelection, value);
+            DisplayRightImage();
+        }
+    }
+
 
     public Cursor PointerCursor
     {
@@ -108,38 +142,82 @@ public class MainViewModel : ViewModelBase
 
         LayoutFileType layoutTypeComboBoxSelection = EnumUtils.ParseDescription<LayoutFileType>(_comboBoxTextLayoutType);
 
-        ImageAndLabelGeneratorBase generator = null;
+        _generator = null;
         
         switch (layoutTypeComboBoxSelection) {
 
             case LayoutFileType.ScatteredText:
-                generator = new ScatteredTextGenerator(_pageImageWidth, _pageImageHeight); 
+                _generator = new ScatteredTextGenerator(_pageImageWidth, _pageImageHeight); 
                 break;
             case LayoutFileType.Paragraph:
-                generator = new ParagraphGenerator(_pageImageWidth, _pageImageHeight);
+                _generator = new ParagraphGenerator(_pageImageWidth, _pageImageHeight);
                 break;
             case LayoutFileType.Table:
-                generator = new TableGenerator(_pageImageWidth, _pageImageHeight);
+                _generator = new TableGenerator(_pageImageWidth, _pageImageHeight);
                 break;
         }
 
-        generator.BackgroundProbability = BackgroundProbability;
-        generator.LinesProbability = LinesProbability;
-        generator.NoiseProbability = NoiseProbability;
-        generator.BlurProbability = BlurProbability;
-        generator.PixelateProbability = PixelateProbability;
-        generator.InvertProbability = InvertImageProbability;
+        _generator.BackgroundProbability = BackgroundProbability;
+        _generator.LinesProbability = LinesProbability;
+        _generator.NoiseProbability = NoiseProbability;
+        _generator.BlurProbability = BlurProbability;
+        _generator.PixelateProbability = PixelateProbability;
+        _generator.InvertProbability = InvertImageProbability;
 
-        generator.Generate();
+        _generator.GenerationPipeline(false);
 
-        LeftBitmap = SKBitmapToAvaloniaBitmap(generator.TextImage);
-        RightBitmap = SKBitmapToAvaloniaBitmap(generator.HeatMapImage);
-        //RightBitmap = SKBitmapToAvaloniaBitmap(generator.CharacterBoxImage);
-        //LeftBitmap = SKBitmapToAvaloniaBitmap(generator.CharacterBoxImage);
+        DisplayLeftImage();
+        DisplayRightImage();
 
         SetMouseCursorToDefault();
     }
 
+
+    private void DisplayLeftImage()
+    {
+        if (_generator == null)
+        {
+            return;
+        }
+        switch (EnumUtils.ParseDescription<DisplayImageType>(ComboBoxLeftImageSelection))
+        {
+            case DisplayImageType.Text:
+                LeftBitmap = SKBitmapToAvaloniaBitmap(_generator.TextImage);
+                break;
+            case DisplayImageType.Labels:
+                LeftBitmap = SKBitmapToAvaloniaBitmap(_generator.LabelImage);
+                break;
+            case DisplayImageType.HeatMap:
+                LeftBitmap = SKBitmapToAvaloniaBitmap(_generator.HeatMapImage);
+                break;
+            case DisplayImageType.BoundingBox:
+                LeftBitmap = SKBitmapToAvaloniaBitmap(_generator.BoundingBoxImage);
+                break;
+        }
+    }
+
+    private void DisplayRightImage()
+    {
+        if (_generator == null)
+        {
+            return;
+        }
+        switch (EnumUtils.ParseDescription<DisplayImageType>(ComboBoxRightImageSelection))
+        {
+            case DisplayImageType.Text:
+                RightBitmap = SKBitmapToAvaloniaBitmap(_generator.TextImage);
+                break;
+            case DisplayImageType.Labels:
+                RightBitmap = SKBitmapToAvaloniaBitmap(_generator.LabelImage);
+                break;
+            case DisplayImageType.HeatMap:
+                RightBitmap = SKBitmapToAvaloniaBitmap(_generator.HeatMapImage);
+                break;
+            case DisplayImageType.BoundingBox:
+                RightBitmap = SKBitmapToAvaloniaBitmap(_generator.BoundingBoxImage);
+                break;
+        }
+    }
 
 
 
@@ -157,6 +235,7 @@ public class MainViewModel : ViewModelBase
 
         dialog.Show();
     }
+
 
 
 

@@ -17,7 +17,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
         public string GetRandomWord()
         {
-            
             string word;
 
             if (_random.Next(0, 10) > 2)
@@ -40,7 +39,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 word = word.ToUpper();
             }
 
-
             return word;
         }
 
@@ -53,17 +51,45 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         }
 
 
+        public string GetTestPatternText(SKFont font)
+        {
+            int percentChance = _random.Next(0, 100);
+            string text = "";
+
+            if (percentChance < 25)
+            {
+                text = "ABCJQ";
+            }
+            else if (percentChance < 50)
+            {
+                text = "axhtflpgjq";
+            }
+            else if (percentChance < 75)
+            {
+                text = "1234";
+            }
+            else
+            {
+                text = "{[(/|$#+<x";
+            }
+
+            //text = "{[(|/\\" + font.Typeface.FamilyName;
+
+            return text.Trim();
+        }
+
         public string GetRandomText(SKFont font)
         {
             int percentChance = _random.Next(0, 100);
             string text = "";
 
-            if (percentChance < 10) text = GetRandomAlphaNumericCode();
-            else if (percentChance < 20) text = GetRandomNumber();
-            else if (percentChance < 30) text = GetRandomDate();
-            else if (percentChance < 35) text = GetRandomEmailAddress();
-            else if (percentChance < 40) text = GetRandomWebAddress();
-            else text = GetRandomTextLine(font);
+            if (percentChance < 20) text = GetRandomAlphaNumericCode();
+            else if (percentChance < 30) text = GetRandomNumber();
+            else if (percentChance < 40) text = GetRandomDate();
+            else if (percentChance < 55) text = GetRandomEmailAddress();
+            else if (percentChance < 60) text = GetRandomWebAddress();
+            else text = GetRandomTextLine(font, 1, 3);
+
 
             // double check the font contains all glyphs
             if (!font.ContainsGlyphs(text))
@@ -72,7 +98,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 return "";
             }
 
-            return text;
+            return text.Trim();
         }
 
 
@@ -84,7 +110,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             string sentence = GetRandomWord();
             while (wordCount < maxWordCount)
             {
-                if (_random.Next(0, 100) < 95) // mostly just words
+                if (_random.Next(0, 100) < 90) // mostly just words
                 {
                     string punc = getRandomPunctuation(font);
                     string word = GetRandomWord();
@@ -106,7 +132,6 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                     }
                 }
 
-                
                 wordCount++;
             }
 
@@ -123,7 +148,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             int retry = 0;
             while (retry < 5)
             {
-                int rand = _random.Next(0, 110);
+                int rand = _random.Next(0, 200);
 
                 if (rand < 20) { punctuation = ". "; }
                 else if (rand < 30) { punctuation = ", "; }
@@ -133,19 +158,29 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 else if (rand < 50) { punctuation = " \""; }
                 else if (rand < 55) { punctuation = "\' "; }
                 else if (rand < 60) { punctuation = " \'"; }
-                else if (rand < 65) { punctuation = "! "; }
-                else if (rand < 70) { punctuation = " – "; } // long dash
-                else if (rand < 80) { punctuation = " ‘"; }  // left single quote
-                else if (rand < 85) { punctuation = "’ "; }  // right single quote
-                else if (rand < 90) { punctuation = " “"; }  // left double quote
-                else if (rand < 95) { punctuation = "” "; }  // right double quote
-                else if (rand < 96) { punctuation = "© "; }  // copyright
-                else if (rand < 97) { punctuation = "® "; }  // registered trademark
-                else if (rand < 98) { punctuation = "§ "; }  // section sign
-                else if (rand < 99) { punctuation = " «"; }  // left double angle
-                else if (rand < 100) { punctuation = "» "; }  // right double angle
-                else if (rand < 101) { punctuation = " | "; }  // pipe
-                else { punctuation = " "; } // default
+                else if (rand < 65) { punctuation = "! "; }    // exclamation
+                else if (rand < 70) { punctuation = ": "; }    // colon
+                else if (rand < 75) { punctuation = "; "; }    // semicolon
+                else if (rand < 80) { punctuation = " – "; }   // long dash
+                else if (rand < 85) { punctuation = " ‘"; }    // left single quote
+                else if (rand < 90) { punctuation = "’ "; }    // right single quote
+                else if (rand < 95) { punctuation = " “"; }    // left double quote
+                else if (rand < 100) { punctuation = "” "; }   // right double quote
+                else if (rand < 105) { punctuation = ") "; } 
+                else if (rand < 110) { punctuation = " ("; }
+                else if (rand < 115) { punctuation = "] "; }
+                else if (rand < 120) { punctuation = " ["; }
+                else if (rand < 125) { punctuation = "> "; } 
+                else if (rand < 130) { punctuation = " <"; } 
+
+                else if (rand < 132) { punctuation = "© "; }   // copyright
+                else if (rand < 134) { punctuation = "® "; }   // registered trademark
+                else if (rand < 136) { punctuation = "§ "; }   // section sign
+                else if (rand < 137) { punctuation = " «"; }   // left double angle / guillemet
+                else if (rand < 138) { punctuation = "» "; }   // right double angle / guillemet
+                else if (rand < 140) { punctuation = " | "; }  // pipe
+
+                else { punctuation = " "; } // default, space
 
                 if (font.ContainsGlyphs(punctuation))
                 {
@@ -166,7 +201,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
         // for the types of codes you see on documents, like invoices. May contain leters, numbers and puntiation characters like #,:,-,/, etc.
         public string GetRandomAlphaNumericCode()
         {
-            int length = _random.Next(1, 15);
+            int length = _random.Next(1, 12);
             string code = "";
             for (int i = 0; i < length; i++)
             {
@@ -174,7 +209,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
                 if (randomType < 15)
                 {
                     // special character
-                    char[] specialChars = { '#', ':', '-', '+', '=', '_', '/', '.', '(', ')', '[', ']', '{', '}', '<', '>', '!', '@', '$', '%', '&', '*', '?', ',', '^' };
+                    char[] specialChars = { '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '+', '=', '[', ']', '{', '}', '\\', '|', ':', '<', '>', '.', ',', '/', '?' };
                     code += specialChars[_random.Next(0, specialChars.Length)];
                 }
                 else if (randomType < 40)
@@ -353,30 +388,42 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
 
         public SKFont GetRandomFont(int fontSize)
         {
-            // bold or italic?
-            SKFontStyle fs = SKFontStyle.Normal;
-            int stylePercent = _random.Next(0, 100);
-            if (stylePercent < 2)
+            SKFontStyleWeight weight = SKFontStyleWeight.Normal;
+            SKFontStyleWidth width = SKFontStyleWidth.Normal;
+            SKFontStyleSlant slant = SKFontStyleSlant.Upright;
+
+            int weightPercent = _random.Next(0, 100);
+            if (weightPercent < 5)
             {
-                fs = SKFontStyle.BoldItalic;
+                weight = SKFontStyleWeight.Black;
             }
-            else if (stylePercent < 7)
+            else if (weightPercent < 10)
             {
-                fs = SKFontStyle.Bold;
+                weight = SKFontStyleWeight.Bold;
             }
-            else if (stylePercent < 10)
+            else if (weightPercent < 15)
             {
-                fs = SKFontStyle.Italic;
+                weight = SKFontStyleWeight.ExtraLight;
             }
-            SKTypeface tf = SKTypeface.FromFamilyName(GetRandomFontName(), fs);
+
+            //int widthPercent = _random.Next(0, 100);
+            //if (widthPercent > 50)
+            //{
+            //    width = SKFontStyleWidth.Expanded; // doesn't appear to make a difference
+            //}
+
+            int slantPercent = _random.Next(0, 100);
+            if (slantPercent < 5)
+            {
+                slant = SKFontStyleSlant.Italic;
+            }
+
+            SKTypeface tf = SKTypeface.FromFamilyName(GetRandomFontName(), weight, width, slant);
             return new SKFont(tf, fontSize);
         }
 
-
         public string GetRandomFontName()
         {
-
-
             var fonts = FontManager.Current.SystemFonts;
 
             string fontList = "";
@@ -386,66 +433,64 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             }
 
 
-
-
             string[] fontNames = {
+                "Agency FB",
                 "Arial",
                 "Bahnschrift",
-                "Baskerville Old Face",
+                "Bernard MT",
                 "Bodoni MT",
                 "Book Antiqua",
                 "Bookman Old Style",
+                "Britannic",
                 "Calibri",
                 "Calisto MT",
-                "Cambria",
-                "Candara",
+                 //"Cambria", // height way too big
+                 //"Candara",  // hanging numerals
                 "Cascadia Code",
                 "Centaur",
                 "Century",
+                "Century Gothic",
                 "Century Schoolbook",
                 "Comic Sans MS",
                 "Consolas",
-                "Constantia",
-                "Corbel",
-                "Courier New",
+                 //"Constantia",  // hanging numerals
+                 // "Corbel",  // hanging numerals
+                "Courier New", // numerals taller than capheight
                 "Dubai",
                 "Ebrima",
+                "Elephant",
                 "Eras ITC",
                 "Fira Mono",
                 "Footlight MT",
                 "Franklin Gothic",
-                "Franklin Gothic Demi",
-                "Gabriola",
                 "Gadugi",
-                "Georgia",
+                 //"Georgia",  // hanging numerals
                 "Gill Sans MT",
-                "Helvetica",
+                "Impact",
+                "Lato",
                 "Leelawadee UI",
                 "Lucida Console",
                 "Lucida Sans",
                 "Lucida Sans Typewriter",
                 "Maiandra GD",
-                "Malgun Gothic",
+                "Microsoft Himalaya",
                 "Microsoft JhengHei",
-                "MingLiU-ExtB",
-                "MingLiU_HKSCS-ExtB",
-                "MS Gothic",
+                 //"MingLiU-ExtB", // all characters go under baseline
                 "MS Reference Sans Serif",
                 "NSimSun",
                 "Nirmala UI",
                 "OCR A",
+                "OCR B",
                 "Palatino Linotype",
-                "Perfect DOS VGA 437 Win",
                 "Rockwell",
                 "Segoe UI",
-                "Sitka Text",
+                 //"Sitka Text", // hanging numerals
                 "Sylfaen",
                 "Tahoma",
                 "Times New Roman",
                 "Trebuchet MS",
                 "Tw Cen MT",
                 "Verdana",
-                "Yu Gothic",
             };
 
             // test bad font name
@@ -513,6 +558,72 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             return vowels[randomInt];
         }
 
+
+        public Dictionary<string, double> FontCustomAscentFactor { get; } = new Dictionary<string, double>()
+        {
+            { "Agency FB", -0.80 },
+            { "Arial", -0.80 },
+            { "Bahnschrift", -0.75 },
+            { "Baskerville Old Face", -0.72 },
+            { "Bernard MT", -0.84 },
+            { "Bodoni MT", -0.72 },
+            { "Book Antiqua", -0.75 },
+            { "Bookman Old Style", -0.75 },
+            { "Britannic", -0.73 },
+            { "Calibri", -0.71 },
+            { "Calisto MT", -0.75 },
+            { "Cambria", -0.75 },
+            { "Candara", -0.75 },
+            { "Cascadia Code", -0.79 },
+            { "Centaur", -0.71 },
+            { "Century", -0.81 },
+            { "Century Gothic", -0.80 },
+            { "Century Schoolbook", -0.80 },
+            { "Comic Sans MS", -0.85 },
+            { "Consolas", -0.73 },
+            { "Constantia", -0.78 },
+            { "Corbel", -0.75 },
+            { "Courier New", -0.71 },
+            { "Dubai", -0.76 },
+            { "Ebrima", -0.80 },
+            { "Elephant", -0.82 },
+            { "Eras ITC", -0.75 },
+            { "Fira Mono", -0.80 },
+            { "Footlight MT", -0.74 },
+            { "Franklin Gothic", -0.75 },
+            { "Gadugi", -0.79 },
+            { "Georgia", -0.82 },
+            { "Gill Sans MT", -0.78 },
+            { "Impact", -0.88 },
+            { "Lato", -0.80 },
+            { "Leelawadee UI", -0.82 },
+            { "Lucida Console", -0.79 },
+            { "Lucida Sans", -0.81 },
+            { "Lucida Sans Typewriter", -0.80 },
+            { "Maiandra GD", -0.80 },
+            { "Malgun Gothic", -0.80 },
+            { "Microsoft Himalaya", -0.52 },
+            { "Microsoft JhengHei", -0.85 },
+            { "MingLiU-ExtB", -0.75 },
+            { "MingLiU_HKSCS-ExtB", -0.75 },
+            { "MS Gothic", -0.85 },
+            { "MS Reference Sans Serif", -0.83 },
+            { "NSimSun", -0.75 },
+            { "Nirmala UI", -0.80 },
+            { "OCR A", -0.72 },
+            { "Palatino Linotype", -0.78 },
+            { "Rockwell", -0.75 },
+            { "Segoe UI", -0.79 },
+            { "Sitka Text", -0.73 },
+
+            { "Sylfaen", -0.75 },
+            { "Tahoma", -0.75 },
+            { "Times New Roman", -0.75 },
+            { "Trebuchet MS", -0.75 },
+            { "Tw Cen MT", -0.75 },
+            { "Verdana", -0.75 },
+            { "Yu Gothic", -0.75 }
+        };
 
 
     }

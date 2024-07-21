@@ -4,8 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:OcrSyntheticDataGenerator.Views"
-        mc:Ignorable="d" d:DesignWidth="1850" d:DesignHeight="850"
-		MinWidth="1850" MinHeight="850"
+        mc:Ignorable="d" d:DesignWidth="1850" d:DesignHeight="900"
+		MinWidth="1850" MinHeight="900"
         x:Class="OcrSyntheticDataGenerator.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="OcrSyntheticDataGenerator">

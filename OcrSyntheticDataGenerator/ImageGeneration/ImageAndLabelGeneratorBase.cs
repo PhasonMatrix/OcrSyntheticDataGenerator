@@ -1,4 +1,7 @@
-﻿using OcrSyntheticDataGenerator.ContentModel;
+﻿using Avalonia.Controls;
+using Avalonia.Media;
+using Microsoft.CodeAnalysis;
+using OcrSyntheticDataGenerator.ContentModel;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -6,6 +9,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -34,8 +39,8 @@ public abstract class ImageAndLabelGeneratorBase
 
     public enum CharacterBoxNormalisationType
     {
-        [Description("Stretch")] Stretch,
         [Description("Include surrounding pixels")] IncludeSurroundingPixels,
+        [Description("Stretch")] Stretch,
     };
 
 
@@ -46,13 +51,14 @@ public abstract class ImageAndLabelGeneratorBase
     protected Random _rnd = new Random();
     protected bool _hasDarkBackgroundImage = false;
     protected SKColor _backgroundColour = SKColors.White;
-
+    protected SKColor _veryDarkGrey = new SKColor(0x18, 0x18, 0x18);
+    protected SKColor _veryDarkCyan = new SKColor(0x00, 0x40, 0xff, 0xa0);
+    private int characterImageFileClassLimit = 2_000;
 
     public SKBitmap TextImage { get; set; }
-    public SKBitmap TextMeasuringImage { get; set; }
     public SKBitmap LabelImage { get; set; }
     public SKBitmap HeatMapImage { get; set; }
-    public SKBitmap CharacterBoxImage { get; set; }
+    public SKBitmap BoundingBoxImage { get; set; }
 
 
     public int LinesProbability { get; set; }
@@ -61,8 +67,9 @@ public abstract class ImageAndLabelGeneratorBase
     public int BlurProbability { get; set; }
     public int InvertProbability { get; set; }
     public int PixelateProbability { get; set; }
+    public bool HasBackgroundTexture { get; set; }
 
-    
+
 
 
     public ImageAndLabelGeneratorBase(int imageWidth, int imageHeight)
@@ -71,22 +78,60 @@ public abstract class ImageAndLabelGeneratorBase
         _imageHeight = imageHeight;
 
         TextImage = new SKBitmap(imageWidth, imageHeight);
-        TextMeasuringImage = new SKBitmap(imageWidth, imageHeight);
         LabelImage = new SKBitmap(imageWidth, imageHeight);
         HeatMapImage = new SKBitmap(imageWidth, imageHeight);
-        CharacterBoxImage = new SKBitmap(imageWidth, imageHeight);
+        BoundingBoxImage = new SKBitmap(imageWidth, imageHeight);
     }
 
 
     // decendants must override
-    public abstract void Generate();
+    public abstract void GenerateContent();
+    public abstract void DrawContent();
 
 
-
-
-
-    protected void PostProcessing(int noisePercentage)
+    public void GenerationPipeline(bool creatingFiles)
     {
+        // clear previous run
+        _contentAreas = new List<ContentArea>();
+
+        PreProcessing();
+        GenerateContent();
+        DrawContent();
+        DrawLabels();
+        PostProcessing();
+
+        if (!creatingFiles)
+        {
+            DrawHeatMap();
+            DrawBoundingBoxes();
+        }
+    }
+
+
+
+    protected void PreProcessing()
+    {
+        int backgroundImagePercentage = _rnd.Next(1, 100);
+        HasBackgroundTexture = backgroundImagePercentage <= BackgroundProbability;
+
+
+        using (SKCanvas textCanvas = new SKCanvas(TextImage))
+        {
+            textCanvas.Clear(SKColors.White);
+        }
+
+        if (HasBackgroundTexture)
+        {
+            DrawBackgroundImage();
+        }
+    }
+
+
+
+    protected void PostProcessing()
+    {
+        int noisePercentage = _rnd.Next(1, 100);
+
         // draw foreground noise 
         if (noisePercentage <= NoiseProbability)
         {
@@ -119,9 +164,85 @@ public abstract class ImageAndLabelGeneratorBase
 
 
 
+    protected List<WordContentArea> ConstructWordAndCharacterObjects(
+        SKFont font, 
+        string text, 
+        int yTextBaseline, 
+        SKPoint[] glyphPositions, 
+        float[] glyphWidths, 
+        SKFontMetrics fontMetrics, 
+        SKRectI measureRect,
+        bool isInverted)
+    {
+        //SKRect[] characterBoxes = ConstructCharacterBoundingBoxes(text, glyphPositions, glyphWidths, measureRect, yTextBaseline, fontMetrics, font);
+        SKRect[] characterBoxes = ConstructCharacterBoundingBoxes(text, glyphPositions, glyphWidths, null, yTextBaseline, fontMetrics, font);
+
+        // measure and crop character box top and bottom
+        SKRect[] croppedCharacterBoxes = GetCroppedCharacterBoxes(text, yTextBaseline, font, characterBoxes, fontMetrics);
+
+        List<WordContentArea> words = CreateWordAndCharacterObjects(text, characterBoxes, croppedCharacterBoxes, yTextBaseline, font, isInverted);
+        return words;
+    }
 
 
-    protected SKRect[] GetCroppedCharacterBoxes(string text, int yTextBaseline, SKFont font, SKRect[] characterBoxes)
+
+    protected SKRect[] ConstructCharacterBoundingBoxes(string text, SKPoint[] positions, float[] widths, SKRect? textBox, int yBaseline, SKFontMetrics fontMetrics, SKFont font)
+    {
+        if (text.Length != positions.Length || positions.Length != widths.Length)
+        {
+            throw new ArgumentException("Expected length of text, positions and widths to be the same.");
+        }
+
+        SKRect[] boxes = new SKRect[text.Length];
+
+
+        //double accentFactor = _randomTextGenerator.FontCustomAscentFactor[font.Typeface.FamilyName];
+        //int accent = (int)(font.Size * accentFactor);
+
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] != ' ')
+            {
+                SKPoint pos = positions[i];
+                float width = widths[i];
+                float bottom = yBaseline + fontMetrics.Bottom;
+                float top = yBaseline + fontMetrics.Top;
+                
+
+                // some fonts have top and bottom lines that are too far from the drawn character. we correct for them individually
+                if (font.Typeface.FamilyName == "Dubai")
+                {
+                    float height = bottom - top;
+                    bottom = bottom - height * 0.2f;
+                }
+
+                if (font.Typeface.FamilyName == "Franklin Gothic" || font.Typeface.FamilyName == "Gabriola" || font.Typeface.FamilyName == "Gill Sans MT" || font.Typeface.FamilyName == "Yu Gothic")
+                {
+                    float height = bottom - top;
+                    bottom = bottom - height * 0.05f;
+                }
+
+
+                SKRect box = new SKRect(pos.X, top, pos.X + width, bottom);
+
+                // adjust to the right for itallic fonts
+                if (font.Typeface.IsItalic)
+                {
+                    float shift = box.Width * 0.20f;
+                    box.Left += shift;
+                    box.Right += shift;
+                }
+
+                boxes[i] = box;
+            }
+        }
+        
+        return boxes;
+    }
+
+
+    protected SKRect[] GetCroppedCharacterBoxes(string text, int yTextBaseline, SKFont font, SKRect[] characterBoxes, SKFontMetrics fontMetrics)
     {
         SKRect[] croppedCharacterBoxes = new SKRect[characterBoxes.Length];
         for (int c = 0; c < characterBoxes.Length; c++)
@@ -131,7 +252,8 @@ public abstract class ImageAndLabelGeneratorBase
             // difference between charbox top and the y basline where it was drawn
             int baselineOffset = (int)(yTextBaseline - currentCharBox.Top);
 
-            var croppedCharBox = GetCroppedCharacterBox(currentCharBox, currentSymbol, font, baselineOffset);
+            //var croppedCharBox = GetCroppedCharacterBox(currentCharBox, currentSymbol, font, baselineOffset);
+            var croppedCharBox = GetCroppedCharacterBoxByFontMetrics(currentCharBox, currentSymbol, font, yTextBaseline, fontMetrics);
             croppedCharacterBoxes[c] = croppedCharBox;
         }
 
@@ -139,19 +261,387 @@ public abstract class ImageAndLabelGeneratorBase
     }
 
 
-    protected static void DrawTextOnCanvas(SKCanvas textCanvas, string text, int x, int yTextBaseline, SKFont font, SKColor textColor)
+
+    public SKRect GetCroppedCharacterBox(SKRect charRect, char symbol, SKFont font, int yBaseline)
     {
-        using (SKPaint paint = new SKPaint())
+        using (SKBitmap b = new SKBitmap((int)charRect.Width + 2, (int)charRect.Height + 2))
+        using (SKCanvas c = new SKCanvas(b))
         {
-            paint.IsAntialias = true;
-            paint.Color = textColor;
-            textCanvas.DrawText(text, x, yTextBaseline, font, paint);
+            SKColor charColor = SKColors.White;
+            using (SKPaint paint = new SKPaint())
+            {
+                paint.IsAntialias = true;
+                paint.Color = charColor;
+                c.DrawText(symbol.ToString(), 0, yBaseline, font, paint);
+            }
+
+            int top = 0;
+            int bottom = 0;
+
+            //find the top row
+            bool topFound = false;
+            int minTop = (int)(charRect.Height * 0.4);
+            for (int y = 0; y < (int)charRect.Height - 1; y++)
+            {
+                for (int x = 1; x < (int)charRect.Width-1; x++)
+                {
+                    SKColor pixel = b.GetPixel(x, y);
+                    if (pixel.Blue > 1 || y > minTop - 1)
+                    {
+                        top = y;
+                        topFound = true;
+                    }
+                    if (topFound) break;
+                }
+                if (topFound) break;
+            }
+
+            //find the bottom row
+            bool bottomFound = false;
+            int maxBottom = yBaseline; // (int)(charRect.Height - (charRect.Height * 0.3));
+            for (int y = (int)(charRect.Height - 1); y > 1; y--)
+            {
+                for (int x = 0; x < (int)charRect.Width - 1; x++)
+                {
+                    SKColor pixel = b.GetPixel(x, y);
+                    if (pixel.Blue > 1 || y < maxBottom + 1)
+                    {
+                        bottom = y;
+                        bottomFound = true;
+                    }
+                    if (bottomFound) break;
+                }
+                if (bottomFound) break;
+            }
+
+            //// adjust to the right for itallic fonts
+            //if (font.Typeface.IsItalic)
+            //{
+            //    float shift = charRect.Width * 0.14f;
+            //    charRect.Left += shift;
+            //    charRect.Right += shift;
+            //}
+
+            SKRect croppedRect = new SKRect(
+                charRect.Left,
+                charRect.Top + top - (float)(charRect.Height * 0.05),
+                charRect.Right,
+                charRect.Top + bottom + (float)(charRect.Height * 0.05)
+                );
+
+
+            return croppedRect;
         }
     }
 
 
 
-    protected void DrawTextBlockBackgroundColour(SKCanvas textCanvas, bool isInverted, bool isLightText, bool isBoxAroundText, SKRect backgoundRect)
+    public SKRect GetCroppedCharacterBoxByFontMetrics(SKRect charRect, char symbol, SKFont font, int yBaseline, SKFontMetrics fontMetrics)
+    {
+        float top = 0;
+        float bottom = 0;
+
+        float correctedTop = (-fontMetrics.CapHeight + fontMetrics.Ascent) / 2;
+        float correctedBottom = fontMetrics.Descent * 0.9f;
+        if (font.Typeface.FamilyName == "Microsoft Himalaya" 
+            || font.Typeface.FamilyName == "Dubai"
+            || font.Typeface.FamilyName == "Impact"
+            )
+        {
+            correctedBottom = fontMetrics.Descent * 0.6f;
+        }
+
+        if (font.Typeface.FamilyName == "Dubai" 
+            || font.Typeface.FamilyName == "Gill Sans MT")
+        {
+            correctedTop = correctedTop * 0.9f;
+        }
+
+        if (font.Typeface.FamilyName == "Lucida Console")
+        {
+            correctedTop = correctedTop * 1.2f;
+        }
+
+
+        switch (symbol)
+        {
+            case 'a': case 'c': case 'e': case 'm': case 'n':
+            case 'o': case 'r': case 's': case 'u': case 'v':
+            case 'w': case 'x': case 'z':
+            case '-': case '=': case '–':
+            case ':': case '.': case '«': case '»':
+                top = -fontMetrics.XHeight;
+                break;
+
+            case 'b': case 'd': case 'f': case 'h':
+            case 'i': case 'k': case 'l': case 't':
+            case '*': case '\'': case '"':
+            case '‘': case '’': case '“': case '”':
+            case '©': case '®':
+            case '^': case '!': 
+                //top = fontMetrics.Ascent;
+                top = correctedTop;
+                break;
+
+            case 'g': case 'p': case 'q':  case 'y':
+            case ',':  case ';':
+                top = -fontMetrics.XHeight;
+                bottom = correctedBottom;
+                break;
+
+            case 'j':
+                if (font.Typeface.FamilyName == "Cascadia Code"
+                    || font.Typeface.FamilyName == "Consolas"
+                    || font.Typeface.FamilyName == "Courier New"
+                    || font.Typeface.FamilyName == "Lucida Console"
+                    || font.Typeface.FamilyName == "Lucida Sans"
+                    || font.Typeface.FamilyName == "Lucida Sans Typewriter"
+                    || font.Typeface.FamilyName == "Microsoft Himalaya"
+                    )
+                {
+                    top = correctedTop;
+                }
+                else
+                {
+                    top = -fontMetrics.CapHeight;
+                }
+                bottom = correctedBottom;
+                break;
+
+            case 'A': case 'B': case 'C': case 'D': case 'E':
+            case 'F': case 'G': case 'H': case 'I': case 'K': 
+            case 'L': case 'M': case 'N': case 'O': case 'P': 
+            case 'R': case 'S': case 'T': case 'U': case 'V': 
+            case 'W': case 'X': case 'Y': case 'Z':
+            case '#': case '%': case '&':
+                top = -fontMetrics.CapHeight;
+                break;
+
+            case '/':
+            case '\\':
+                // tops
+                if (font.Typeface.FamilyName == "Book Antiqua"
+                    || font.Typeface.FamilyName == "Calibri"
+                    || font.Typeface.FamilyName == "Calisto MT"
+                    || font.Typeface.FamilyName == "Cascadia Code"
+                    || font.Typeface.FamilyName == "Courier New"
+                    || font.Typeface.FamilyName == "Centaur"
+                    || font.Typeface.FamilyName == "Consolas"
+                    || font.Typeface.FamilyName == "Dubai"
+                    || font.Typeface.FamilyName == "Gothic"
+                    || font.Typeface.FamilyName == "Fira Mono"
+                    || font.Typeface.FamilyName == "Footlight MT"
+                    || font.Typeface.FamilyName == "Lato"
+                    || font.Typeface.FamilyName == "Lucida Console"
+                    || font.Typeface.FamilyName == "Lucida Sans"
+                    || font.Typeface.FamilyName == "Lucida Sans Typewriter"
+                    || font.Typeface.FamilyName == "Lucida Sans Typewriter"
+                    || font.Typeface.FamilyName == "NSimSun"
+                    || font.Typeface.FamilyName == "Sylfaen"
+                    || font.Typeface.FamilyName == "Tw Cen MT")
+                {
+                    top = correctedTop;
+                }
+                else
+                {
+                    // default to slashes same as caps
+                    top = -fontMetrics.CapHeight;
+                }
+
+                //bottoms
+                if (font.Typeface.FamilyName == "Arial"
+                    || font.Typeface.FamilyName == "Bodoni MT"
+                    || font.Typeface.FamilyName == "Bernard MT"
+                    || font.Typeface.FamilyName == "Calisto MT"
+                    || font.Typeface.FamilyName == "Comic Sans MS"
+                    || font.Typeface.FamilyName == "Century"
+                    || font.Typeface.FamilyName == "Impact"
+                    || font.Typeface.FamilyName == "Rockwell"
+                    || font.Typeface.FamilyName == "Sylfaen"
+                    || font.Typeface.FamilyName == "Times New Roman"
+                    || font.Typeface.FamilyName == "Trebuchet MS"
+                    )
+                {
+                    bottom = 0; // stops at baseline
+                }
+                else
+                {
+                    // default to slashes go below baseline
+                    bottom = correctedBottom;
+                }
+                
+                break;
+            case '[': case ']':
+            case '{': case '}':
+            case '(': case ')':
+            case '|':
+                if (font.Typeface.FamilyName == "Book Antiqua"
+                    || font.Typeface.FamilyName == "Bahnschrift"
+                    || font.Typeface.FamilyName == "Calibri"
+                    || font.Typeface.FamilyName == "Calisto MT"
+                    || font.Typeface.FamilyName == "Cascadia Code"
+                    || font.Typeface.FamilyName == "Centaur"
+                    || font.Typeface.FamilyName == "Century"
+                    || font.Typeface.FamilyName == "Comic Sans MS"
+                    || font.Typeface.FamilyName == "Consolas"
+                    || font.Typeface.FamilyName == "Courier New"
+                    || font.Typeface.FamilyName == "Dubai"
+                    || font.Typeface.FamilyName == "Gothic"
+                    || font.Typeface.FamilyName == "Fira Mono"
+                    || font.Typeface.FamilyName == "Footlight MT"
+                    || font.Typeface.FamilyName == "Lato"
+                    || font.Typeface.FamilyName == "Lucida Console"
+                    || font.Typeface.FamilyName == "Lucida Sans"
+                    || font.Typeface.FamilyName == "Lucida Sans Typewriter"
+                    || font.Typeface.FamilyName == "Lucida Sans Typewriter"
+                    || font.Typeface.FamilyName == "NSimSun"
+                    || font.Typeface.FamilyName == "Sylfaen"
+                    || font.Typeface.FamilyName == "Times New Roman"
+                    || font.Typeface.FamilyName == "Tw Cen MT"
+                    || font.Typeface.FamilyName == "Verdana"
+                    )
+                {
+                    top = correctedTop;
+                }
+                else // same as caps
+                {
+                    top = -fontMetrics.CapHeight;
+                }
+                bottom = correctedBottom;
+                break;
+
+            case 'Q':
+                top = -fontMetrics.CapHeight;
+                if (font.Typeface.FamilyName == "Agency FB"
+                    || font.Typeface.FamilyName == "Bahnschrift"
+                    || font.Typeface.FamilyName == "Century Gothic"
+                    || font.Typeface.FamilyName == "Eras ITC"
+                    || font.Typeface.FamilyName == "OCR A"
+                    )
+                {
+                    bottom = 0;
+                }
+                else
+                {
+                    bottom = correctedBottom;
+                }
+                break;
+
+            case '_':
+                top = -fontMetrics.XHeight;
+                bottom = fontMetrics.Bottom;
+                break;
+
+            case '$':
+                top = correctedTop;
+                bottom = correctedBottom * 0.5f; 
+                break;
+
+            case 'J': // sometimes upper J has a low tail
+                top = -fontMetrics.CapHeight;
+                if (font.Typeface.FamilyName == "Bernard MT"
+                    || font.Typeface.FamilyName == "Bodoni MT"
+                    || font.Typeface.FamilyName == "Book Antiqua"
+                    || font.Typeface.FamilyName == "Centaur"
+                    || font.Typeface.FamilyName == "Footlight MT"
+                    || font.Typeface.FamilyName == "Gill Sans MT"
+                    || font.Typeface.FamilyName == "Lucida Sans"
+                    || font.Typeface.FamilyName == "NSimSun"
+                    || font.Typeface.FamilyName == "Rockwell"
+                    || font.Typeface.FamilyName == "Sylfaen"
+                    )
+                {
+                    bottom = fontMetrics.Descent;
+                }
+                break;
+
+            case '0': case '1': case '2': case '3': case '4': 
+            case '5': case '6': case '7': case '8': case '9':
+                if (font.Typeface.FamilyName == "Courier New")
+                {
+                    top = -fontMetrics.CapHeight * 1.1f;
+                }
+                else if (font.Typeface.FamilyName == "Lucida Console")
+                {
+                    top = fontMetrics.Ascent;
+                }
+                else
+                {
+                    top = -fontMetrics.CapHeight;
+                }
+                break;
+
+            case '<': case '>': case '+': case '~':
+                if (font.Typeface.FamilyName == "Centaur"
+                    || font.Typeface.FamilyName == "Courier New"
+                    || font.Typeface.FamilyName == "Footlight MT"
+                    || font.Typeface.FamilyName == "Franklin Gothic"
+                    || font.Typeface.FamilyName == "Gill Sans MT"
+                    || font.Typeface.FamilyName == "NSimSun"
+                    || font.Typeface.FamilyName == "Tw Cen MT"
+                    )
+                {
+                    top = -fontMetrics.CapHeight;
+                }
+                else if (font.Typeface.FamilyName == "Sylfaen")
+                {
+                    top = -fontMetrics.CapHeight * 0.8f;
+                    bottom = 0;
+                }
+                else
+                {
+                    top = -fontMetrics.CapHeight * 0.8f;
+                    bottom = -fontMetrics.XHeight * 0.1f;
+                }
+                break;
+
+            default:
+                top = correctedTop;
+                bottom = correctedBottom;
+                break;
+        }
+
+
+        SKRect croppedRect = new SKRect(
+                charRect.Left,
+                yBaseline + top,
+                charRect.Right,
+                yBaseline + bottom
+                );
+
+        return croppedRect;
+    }
+
+
+
+    protected void DrawTextOnCanvas(SKCanvas canvas, WordContentArea word, SKColor textColor, bool isUnderlined = false)
+    {
+        using (SKPaint paint = new SKPaint())
+        {
+            paint.IsAntialias = true;
+            paint.Color = textColor;
+            
+
+            if (word.Text != null)
+            {
+
+                canvas.DrawText(word.Text, word.Rect.Left, word.YTextBaseline, word.Font, paint);
+
+                if (isUnderlined)
+                {
+                    // draw underline
+                    paint.StrokeWidth = (int)(word.Font.Size * 0.07);
+
+                    int lineYposition = word.YTextBaseline + _rnd.Next(2, (int)(word.Font.Size * 0.15));
+                    canvas.DrawLine(word.Rect.Left, lineYposition, word.Rect.Right, lineYposition, paint);
+                }
+            }
+        }
+    }
+
+
+
+    protected void DrawTextBlockBackgroundColour(SKCanvas textCanvas, bool isInverted, bool isLightText, bool isBoxAroundText, SKRectI backgoundRect)
     {
         if (isInverted)
         {
@@ -217,88 +707,9 @@ public abstract class ImageAndLabelGeneratorBase
     }
 
 
-    protected void DrawLines(SKCanvas textCanvas)
-    {
-        int numberOfHorizontalLines = _rnd.Next(1, 5);
-        int numberOfVerticalLines = _rnd.Next(1, 4);
 
 
-        for (int hl = 0; hl < numberOfHorizontalLines; hl++)
-        {
-            int lineY = _rnd.Next(0, _imageHeight - 1);
-            int lineX = _rnd.Next(0, _imageHeight / 2);
-            int lineLength = _rnd.Next(30, _imageWidth * 3);
-            int lineThickness = _rnd.Next(1, 4);
-            bool isDashedLine = _rnd.Next(1, 100) < 20;
-            SKRect lineRect = new SKRect(lineX, lineY, lineX + lineLength, lineY + lineThickness);
-
-            SKPath path = new SKPath();
-            path.MoveTo(lineX, lineY);
-            path.LineTo(lineX + lineLength, lineY);
-
-            using (SKPaint paint = new SKPaint())
-            {
-                paint.IsAntialias = true;
-                paint.Color = SKColors.Black;
-                paint.Style = SKPaintStyle.Stroke;
-                paint.StrokeWidth = lineThickness;
-                if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDashPattern(), 0); }
-                textCanvas.DrawPath(path, paint);
-            }
-
-            LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
-            _contentAreas.Add(lca);
-        }
-        for (int vl = 0; vl < numberOfVerticalLines; vl++)
-        {
-            int lineY = _rnd.Next(0, _imageHeight / 2);
-            int lineX = _rnd.Next(0, _imageHeight - 1);
-            int lineLength = _rnd.Next(30, _imageHeight * 3);
-            int lineThickness = _rnd.Next(1, 4);
-            bool isDashedLine = _rnd.Next(1, 100) < 8;
-            SKRect lineRect = new SKRect(lineX, lineY, lineX + lineThickness, lineY + lineLength);
-
-            SKPath path = new SKPath();
-            path.MoveTo(lineX, lineY);
-            path.LineTo(lineX, lineY + lineLength);
-            using (SKPaint paint = new SKPaint())
-            {
-                paint.IsAntialias = true;
-                paint.Color = SKColors.Black;
-                paint.Style = SKPaintStyle.Stroke;
-                paint.StrokeWidth = lineThickness;
-                if (isDashedLine) { paint.PathEffect = SKPathEffect.CreateDash(GetRandomLineDashPattern(), 0); }
-                textCanvas.DrawPath(path, paint);
-            }
-
-            LineContentArea lca = new LineContentArea() { Rect = RectToRectI(lineRect) };
-            _contentAreas.Add(lca);
-        }
-    }
-
-
-
-    protected float[] GetRandomLineDashPattern()
-    {
-
-        if (_rnd.Next(1, 100) < 90) // most of the time, just a simple dash
-        {
-            float dashSize = _rnd.Next(5, 20);
-            float gapSize = _rnd.Next(5, 20);
-            return new float[] { dashSize, gapSize };
-        }
-        else // sometimes do a complex dash of shorter and longer dashes
-        {
-            float smallDashSize = _rnd.Next(5, 10);
-            float largeDashSize = _rnd.Next(12, 30);
-            float gapSize = _rnd.Next(5, 20);
-            return new float[] { smallDashSize, gapSize, largeDashSize, gapSize };
-        }
-    }
-
-
-
-    protected void DrawBackgroundImage(SKCanvas textCanvas)
+    protected void DrawBackgroundImage()
     {
         DirectoryInfo backgroundImageFolder = new DirectoryInfo("./BackgroundImages");
         if (backgroundImageFolder != null)
@@ -307,10 +718,10 @@ public abstract class ImageAndLabelGeneratorBase
             int randomFileIndex = _rnd.Next(0, files.Length);
             var imageFile = files[randomFileIndex];
 
+            using (SKCanvas textCanvas = new SKCanvas(TextImage))
             using (SKBitmap backgroundImage = SKBitmap.Decode(imageFile.FullName))
             {
                 int randomRotation = _rnd.Next(0, 55);
-
                 double randomScale = _rnd.NextDouble() + 0.5;
 
                 SKSizeI size = new SKSizeI();
@@ -336,9 +747,9 @@ public abstract class ImageAndLabelGeneratorBase
                 // get average darkness of background image
                 int totalLightness = 0;
                 int totalPixels = 0;
-                for (int pxX = 0; pxX < scaledBackgroundImage.Info.Width; pxX += 1)
+                for (int pxX = 0; pxX < scaledBackgroundImage.Info.Width; pxX += 20)
                 {
-                    for (int pxY = 0; pxY < scaledBackgroundImage.Info.Height; pxY += 1)
+                    for (int pxY = 0; pxY < scaledBackgroundImage.Info.Height; pxY += 20)
                     {
                         totalLightness += scaledBackgroundImage.GetPixel(pxX, pxY).Red;
                         totalPixels++;
@@ -355,26 +766,40 @@ public abstract class ImageAndLabelGeneratorBase
     }
 
 
-    protected List<WordContentArea> CreateWordAndCharacterObjects(string text, SKRect[] characterBoxes)
+    protected List<WordContentArea> CreateWordAndCharacterObjects(
+        string text, 
+        SKRect[] characterBoxes, 
+        SKRect[] croppedCharacterBoxes, 
+        int yTextBaseline, 
+        SKFont font, 
+        bool isInverted = false)
     {
-
         List<WordContentArea> words = new List<WordContentArea>();
 
         WordContentArea word = new WordContentArea();
+        word.IsInverted = isInverted;
+        word.Font = font;
+        word.YTextBaseline = yTextBaseline;
 
 
         for (int c = 0; c < characterBoxes.Length; c++)
         {
             SKRect currentCharBox = characterBoxes[c];
+            SKRect currentCroppedCharBox = croppedCharacterBoxes[c];
             char currentSymbol = text[c];
 
             CharacterContentArea character = new CharacterContentArea();
             character.Symbol = currentSymbol;
+            character.IsInverted = isInverted;
+
 
             if (c == 0) // first character
             {
                 character.Rect = RectToRectI(currentCharBox);
+                character.CroppedRect = RectToRectI(currentCroppedCharBox);
                 word = new WordContentArea();
+                word.Font = font;
+                word.YTextBaseline = yTextBaseline;
                 word.Rect = RectToRectI(currentCharBox);
             }
             else if (currentSymbol == ' ') // space between words
@@ -382,12 +807,16 @@ public abstract class ImageAndLabelGeneratorBase
                 WordContentArea wordCopy = word.Clone();
                 words.Add(wordCopy);
                 word = new WordContentArea();
+                word.Font = font;
+                word.YTextBaseline = yTextBaseline;
             }
 
 
             if (currentSymbol != ' ')
             {
                 character.Rect = RectToRectI(currentCharBox);
+
+                character.CroppedRect = RectToRectI(currentCroppedCharBox);
                 word.Characters.Add(character);
                 if (string.IsNullOrEmpty(word.Text))
                 {
@@ -401,7 +830,11 @@ public abstract class ImageAndLabelGeneratorBase
             }
         }
 
-        words.Add(word);
+        if (word.Text != null) // if last character in the phrase is a space, text will be null here
+        {
+            words.Add(word);
+        }
+        
         return words;
     }
 
@@ -416,18 +849,42 @@ public abstract class ImageAndLabelGeneratorBase
     }
 
 
-    protected void DrawCharacterProbabilityLabels(SKRect charRect, SKCanvas labelCanvas)
+
+
+
+    protected void DrawLabels()
     {
-        // adjust the rectangle a bit
-        charRect = new SKRect(charRect.Left, charRect.Top - 2, charRect.Right + 1, charRect.Bottom + 2);
+        using (SKCanvas labelCanvas = new SKCanvas(LabelImage))
+        using (SKPaint wordRectPaint = new SKPaint())
+        {
+            labelCanvas.Clear(SKColors.Black);
+            wordRectPaint.Color = _veryDarkGrey;
+            wordRectPaint.Style = SKPaintStyle.Fill;
 
-        SKBitmap stampBitmap = GetSingleCharacterLabelImage();
-        labelCanvas.DrawBitmap(stampBitmap, charRect);
 
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+                if (contentArea is TextContentArea phrase)
+                {
+                    foreach (WordContentArea word in phrase.Words)
+                    {
+                        // draw whole word background
+                        //labelCanvas.DrawRect(word.Rect, wordRectPaint);
+
+                        foreach (CharacterContentArea character in word.Characters)
+                        {
+                            //SKBitmap stampBitmap = GetSingleCharacterLabelImageDiamond();
+                            SKBitmap stampBitmap = GetSingleCharacterLabelImageGaussian();
+                            labelCanvas.DrawBitmap(stampBitmap, character.CroppedRect);
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
-    protected SKBitmap GetSingleCharacterLabelImage()
+    protected SKBitmap GetSingleCharacterLabelImageGaussian()
     {
         int size = 100; // center to edge
 
@@ -445,7 +902,67 @@ public abstract class ImageAndLabelGeneratorBase
                 SKShaderTileMode.Decal
                 );
 
-            canvas.DrawCircle(0, 0, size*4, paint);
+            canvas.DrawCircle(0, 0, size * 4, paint);
+        }
+
+        return bitmap;
+    }
+
+
+    protected SKBitmap GetSingleCharacterLabelImageDiamond()
+    {
+        int size = 100; // center to edge
+
+        SKBitmap bitmap = new SKBitmap(size * 2, size * 2);
+
+        using (SKCanvas canvas = new SKCanvas(bitmap))
+        using (SKPaint paint = new SKPaint())
+        {
+            paint.IsAntialias = true;
+            paint.Style = SKPaintStyle.Fill;
+            SKColor lightGrey = new SKColor(0xb0, 0xb0, 0xb0);
+            SKColor[] colours = new SKColor[] { _veryDarkGrey, _veryDarkGrey, _veryDarkGrey, lightGrey, SKColors.White };
+
+
+            SKRect topLeft = new SKRect(0, 0, size, size);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(topLeft.Left, topLeft.Top),
+                new SKPoint(topLeft.Right, topLeft.Bottom),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(topLeft, paint);
+
+            SKRect topRight = new SKRect(size, 0, size * 2, size);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(topRight.Right, topRight.Top),
+                new SKPoint(topRight.Left, topRight.Bottom),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(topRight, paint);
+
+
+            // bottom-left
+            SKRect bottomLeft = new SKRect(0, size, size, size * 2);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(bottomLeft.Left, bottomLeft.Bottom),
+                new SKPoint(bottomLeft.Right, bottomLeft.Top),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(bottomLeft, paint);
+
+            // bottom-right
+            SKRect bottomRight = new SKRect(size, size, size * 2, size * 2);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(bottomRight.Right, bottomRight.Bottom),
+                new SKPoint(bottomRight.Left, bottomRight.Top),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(bottomRight, paint);
+
         }
 
         return bitmap;
@@ -453,85 +970,55 @@ public abstract class ImageAndLabelGeneratorBase
 
 
 
-    protected void DrawLabels(
-        SKFont font,
-        SKCanvas labelCanvas,
-        SKCanvas heatMapCanvas,
-        SKCanvas characterBoxCanvas,
-        string text,
-        int x,
-        int yTextBaseline,
-        SKRect[] croppedCharacterBoxes,
-        List<WordContentArea> words)
+
+    protected void DrawHeatMap()
     {
-
-        SKColor textColor;
-        var heatMapTextColour = SKColors.Black;
-        DrawTextOnCanvas(heatMapCanvas, text, x, yTextBaseline, font, heatMapTextColour);
-
-
-
-        // Character Box Image - draw text
-        textColor = SKColors.Black;
-        using (SKPaint paint = new SKPaint())
+        using (SKCanvas heatmapCanvas = new SKCanvas(HeatMapImage))
         {
-            paint.IsAntialias = true;
-            paint.Color = textColor;
-            characterBoxCanvas.DrawText(text, x, yTextBaseline, font, paint);
-        }
+            heatmapCanvas.Clear(SKColors.Blue);
 
-        // Character Box Image - draw boxes
-
-        SKColor charBoxColour = new SKColor(0, 100, 255, 220);
-        using (SKPaint paint = new SKPaint())
-        {
-            paint.IsAntialias = true;
-            paint.Color = charBoxColour;
-            paint.Style = SKPaintStyle.Stroke;
-            foreach (SKRect characterBox in croppedCharacterBoxes)
+            foreach (ContentArea contentArea in _contentAreas)
             {
-                characterBoxCanvas.DrawRect(characterBox, paint);
-                // label image and heatmap image
-
-                DrawCharacterProbabilityLabels(characterBox, labelCanvas);
-                DrawCharacterHeatMap(characterBox, heatMapCanvas);
+                if (contentArea is TextContentArea phrase)
+                {
+                    foreach (WordContentArea word in phrase.Words)
+                    {
+                        // draw whole word background
+                        DrawTextOnCanvas(heatmapCanvas, word, SKColors.Black);
+                    }
+                }
             }
         }
 
-
-        SKColor wordBoxColour = new SKColor(0, 255, 50, 220);
-        using (SKPaint paint = new SKPaint())
+        using (SKCanvas heatmapCanvas = new SKCanvas(HeatMapImage))
+        using (SKPaint heatmapPaint = new SKPaint())
+        using (SKPaint wordRectPaint = new SKPaint())
         {
-            paint.IsAntialias = true;
-            paint.Color = wordBoxColour;
-            paint.Style = SKPaintStyle.Stroke;
-            foreach (var word in words)
+            heatmapPaint.Color = heatmapPaint.Color.WithAlpha(0x80);
+            wordRectPaint.Color = _veryDarkCyan;
+
+            foreach (ContentArea contentArea in _contentAreas)
             {
-                SKRect wordDisplayRect = new SKRect(word.Rect.Left, word.Rect.Top, word.Rect.Right, word.Rect.Bottom);
-                wordDisplayRect.Inflate(2, 2);
-                characterBoxCanvas.DrawRect(wordDisplayRect, paint);
+                if (contentArea is TextContentArea phrase)
+                {
+                    foreach (WordContentArea word in phrase.Words)
+                    {
+                        //heatmapCanvas.DrawRect(word.Rect, wordRectPaint);
+
+                        foreach (CharacterContentArea character in word.Characters)
+                        {
+                            SKBitmap stampBitmap = GetSingleCharacterHeatMapImageDiamond();
+                            heatmapCanvas.DrawBitmap(stampBitmap, character.CroppedRect, heatmapPaint);
+                        }
+                    }
+                }
             }
         }
-
     }
 
 
-    protected void DrawCharacterHeatMap(SKRect charRect, SKCanvas labelCanvas)
-    {
-        // adjust the rectangle a bit
-        charRect = new SKRect(charRect.Left, charRect.Top - 2, charRect.Right + 1, charRect.Bottom + 2);
 
-        SKBitmap stampBitmap = GetSingleCharacterHeatMapImage();
-        using (SKPaint paint = new SKPaint())
-        {
-            paint.Color = paint.Color.WithAlpha(0xA0);
-            labelCanvas.DrawBitmap(stampBitmap, charRect, paint);
-        }
-            
-    }
-
-
-    protected SKBitmap GetSingleCharacterHeatMapImage()
+    protected SKBitmap GetSingleCharacterHeatMapImageGaussian()
     {
         int size = 100; // center to edge
         SKBitmap bitmap = new SKBitmap(size * 2, size * 2);
@@ -544,7 +1031,7 @@ public abstract class ImageAndLabelGeneratorBase
             paint.Shader = SKShader.CreateRadialGradient(
                 new SKPoint(size, size),
                 size,
-                new SKColor[] {  SKColors.Black, SKColors.Red, SKColors.Orange, SKColors.Yellow, SKColors.LightGreen, SKColors.DarkCyan, SKColors.Blue },
+                new SKColor[] { SKColors.Black, SKColors.Red, SKColors.Orange, SKColors.Yellow, SKColors.LightGreen, SKColors.DarkCyan, SKColors.Blue },
                 SKShaderTileMode.Decal
                 );
 
@@ -554,102 +1041,128 @@ public abstract class ImageAndLabelGeneratorBase
     }
 
 
-    protected SKRect[] ConstructCharacterBoundingBoxes(string text, SKPoint[] positions, float[] widths, SKRect textBox)
+    protected SKBitmap GetSingleCharacterHeatMapImageDiamond()
     {
-        if (text.Length != positions.Length || positions.Length != widths.Length)
+        int size = 100; // center to edge
+
+        SKBitmap bitmap = new SKBitmap(size * 2, size * 2);
+
+        using (SKCanvas canvas = new SKCanvas(bitmap))
+        using (SKPaint paint = new SKPaint())
         {
-            throw new ArgumentException("Expected length of text, positions and widths to be the same.");
-        }
-
-        SKRect[] boxes = new SKRect[text.Length];
-
-        for (int i = 0; i < text.Length; i++)
-        {
-            if (text[i] != ' ')
+            paint.IsAntialias = true;
+            paint.Style = SKPaintStyle.Fill;
+            SKColor transparent = new SKColor(0x00, 0x00, 0x00, 0x00);
+            SKColor[] colours = new SKColor[]
             {
-                SKPoint pos = positions[i];
-                float witdh = widths[i];
-                SKRect box = new SKRect(pos.X, textBox.Top, pos.X + witdh, textBox.Bottom);
-                boxes[i] = box;
-            }
-        }
-
-        return boxes;
-    }
-
-
-    public SKRect GetCroppedCharacterBox(SKRect charRect, char symbol, SKFont font, int yBaseline)
-    {
-        using (SKBitmap b = new SKBitmap((int)charRect.Width + 2, (int)charRect.Height + 2))
-        using (SKCanvas c = new SKCanvas(b))
-        {
-            SKColor charColor = SKColors.White;
-            using (SKPaint paint = new SKPaint())
-            {
-                paint.IsAntialias = true;
-                paint.Color = charColor;
-                c.DrawText(symbol.ToString(), 0, yBaseline, font, paint);
-            }
-
-            int top = 0;
-            int bottom = 0;
-
-            //find the top row
-            bool topFound = false;
-            int minTop = (int)(charRect.Height * 0.4);
-            for (int y = 0; y < (int)charRect.Height - 1; y++)
-            {
-                for (int x = 0; x < (int)charRect.Width; x++)
-                {
-                    SKColor pixel = b.GetPixel(x, y);
-                    if (pixel.Blue > 1 || y > minTop - 1)
-                    {
-                        top = y;
-                        topFound = true;
-                    }
-                    if (topFound) break;
-                }
-                if (topFound) break;
-            }
-
-            //find the bottom row
-            bool bottomFound = false;
-            int maxBottom = (int)(charRect.Height - (charRect.Height * 0.3));
-            for (int y = (int)(charRect.Height - 1); y > 1; y--)
-            {
-                for (int x = 0; x < (int)charRect.Width - 1; x++)
-                {
-                    SKColor pixel = b.GetPixel(x, y);
-                    if (pixel.Blue > 1 || y < maxBottom + 1)
-                    {
-                        bottom = y;
-                        bottomFound = true;
-                    }
-                    if (bottomFound) break;
-                }
-                if (bottomFound) break;
-            }
-
-            // adjust to the right for itallic fonts
-            if (font.Typeface.IsItalic)
-            {
-                float shift = charRect.Width * 0.135f;
-                charRect.Left += shift;
-                charRect.Right += shift;
-            }
+                transparent,
+                transparent,
+                transparent,
+                transparent,
+                transparent,
+                SKColors.DarkCyan,
+                SKColors.LightGreen,
+                SKColors.Yellow,
+                SKColors.Orange,
+                SKColors.Red,
+                SKColors.Black,
+            };
 
 
-            SKRect croppedRect = new SKRect(
-                charRect.Left,
-                charRect.Top + top - (float)(charRect.Height * 0.05),
-                charRect.Right,
-                charRect.Top + bottom + (float)(charRect.Height * 0.05)
+            SKRect topLeft = new SKRect(0, 0, size, size);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(topLeft.Left, topLeft.Top),
+                new SKPoint(topLeft.Right, topLeft.Bottom),
+                colours,
+                SKShaderTileMode.Decal
                 );
+            canvas.DrawRect(topLeft, paint);
+
+            SKRect topRight = new SKRect(size, 0, size * 2, size);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(topRight.Right, topRight.Top),
+                new SKPoint(topRight.Left, topRight.Bottom),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(topRight, paint);
 
 
-            return croppedRect;
+            // bottom-left
+            SKRect bottomLeft = new SKRect(0, size, size, size * 2);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(bottomLeft.Left, bottomLeft.Bottom),
+                new SKPoint(bottomLeft.Right, bottomLeft.Top),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(bottomLeft, paint);
+
+            // bottom-right
+            SKRect bottomRight = new SKRect(size, size, size * 2, size * 2);
+            paint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(bottomRight.Right, bottomRight.Bottom),
+                new SKPoint(bottomRight.Left, bottomRight.Top),
+                colours,
+                SKShaderTileMode.Decal
+                );
+            canvas.DrawRect(bottomRight, paint);
+
+        }
+
+        return bitmap;
+    }
+
+
+
+    protected void DrawBoundingBoxes()
+    {
+        using (SKCanvas characterBoxCanvas = new SKCanvas(BoundingBoxImage))
+        using (SKPaint paint = new SKPaint())
+        {
+            characterBoxCanvas.Clear(SKColors.White);
+
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = 1.0f;
+            SKColor croppedRectColor = new SKColor(0xff, 0x00, 0x00, 0x80);
+            SKColor fullRectColor = new SKColor(0x00, 0xff, 0x10, 0x80);
+
+            foreach (ContentArea contentArea in _contentAreas)
+            {
+                if (contentArea is TextContentArea phrase)
+                {
+                    foreach (WordContentArea word in phrase.Words)
+                    {
+                        DrawTextOnCanvas(characterBoxCanvas, word, SKColors.Black);
+
+                        paint.Color = croppedRectColor;
+                        foreach (CharacterContentArea character in word.Characters)
+                        {
+                            characterBoxCanvas.DrawRect(character.CroppedRect, paint);
+                        }
+
+                        //paint.Color = fullRectColor;
+                        //foreach (CharacterContentArea character in word.Characters)
+                        //{
+                        //    characterBoxCanvas.DrawRect(character.Rect, paint);
+                        //}
+
+                        paint.Color = new SKColor(0x00, 0x20, 0xff, 0x80);
+                        SKRect wordDisplayRect = new SKRect(word.Rect.Left, word.Rect.Top, word.Rect.Right, word.Rect.Bottom);
+                        wordDisplayRect.Inflate(2, 2);
+                        //characterBoxCanvas.DrawRect(wordDisplayRect, paint);
+                        
+                    }
+                }
+            }
         }
     }
+
+
+
+
+
+
 
 
     // collision detection
@@ -937,21 +1450,21 @@ public abstract class ImageAndLabelGeneratorBase
 
         int xOffset = 0;
         int yOffset = 0;
-        if (inflatedRect.Left < 0)   
-        { 
-            xOffset = - inflatedRect.Left - (character.Rect.Width / 2); 
+        if (inflatedRect.Left < 0)
+        {
+            xOffset = -inflatedRect.Left;
         }
-        if (inflatedRect.Right > TextImage.Width)  
-        { 
-            xOffset = (TextImage.Width - inflatedRect.Right) + (character.Rect.Width / 2); 
+        if (inflatedRect.Right > TextImage.Width)
+        {
+            xOffset = TextImage.Width - inflatedRect.Right;
         }
-        if (inflatedRect.Top < 0)    
-        { 
-            yOffset = - inflatedRect.Top - (character.Rect.Height / 2); 
+        if (inflatedRect.Top < 0)
+        {
+            yOffset = -inflatedRect.Top;
         }
-        if (inflatedRect.Bottom > TextImage.Height) 
-        { 
-            yOffset = (TextImage.Height - inflatedRect.Bottom) + (character.Rect.Height / 2);
+        if (inflatedRect.Bottom > TextImage.Height)
+        {
+            yOffset = TextImage.Height - inflatedRect.Bottom;
         }
 
         SKBitmap charImage = new SKBitmap(inflatedRect.Width, inflatedRect.Height);
@@ -981,7 +1494,7 @@ public abstract class ImageAndLabelGeneratorBase
 
         // calcualate dimensions of a square 
         int xInflateAmount = 0;
-        int yInflateAmount = 2;
+        int yInflateAmount = 0;
 
         if (character.Rect.Width < character.Rect.Height)
         {
@@ -996,6 +1509,16 @@ public abstract class ImageAndLabelGeneratorBase
 
         SKRectI inflatedRect = SKRectI.Inflate(character.Rect, xInflateAmount, yInflateAmount);
 
+        // even the height/width to an exact square
+        if (inflatedRect.Height == inflatedRect.Width - 1)
+        {
+            inflatedRect.Bottom++;
+        }
+        if (inflatedRect.Height == inflatedRect.Width + 1)
+        {
+            inflatedRect.Right++;
+        }
+
         TextImage.ExtractSubset(tempCharImage, inflatedRect);
 
 
@@ -1006,19 +1529,19 @@ public abstract class ImageAndLabelGeneratorBase
         int yOffset = 0;
         if (inflatedRect.Left < 0)
         {
-            xOffset = -inflatedRect.Left - (character.Rect.Width / 2);
+            xOffset = -inflatedRect.Left;
         }
         if (inflatedRect.Right > TextImage.Width)
         {
-            xOffset = (TextImage.Width - inflatedRect.Right) + (character.Rect.Width / 2);
+            xOffset = TextImage.Width - inflatedRect.Right;
         }
         if (inflatedRect.Top < 0)
         {
-            yOffset = -inflatedRect.Top - (character.Rect.Height / 2);
+            yOffset = -inflatedRect.Top;
         }
         if (inflatedRect.Bottom > TextImage.Height)
         {
-            yOffset = (TextImage.Height - inflatedRect.Bottom) + (character.Rect.Height / 2);
+            yOffset = TextImage.Height - inflatedRect.Bottom;
         }
 
         SKBitmap charImage = new SKBitmap(inflatedRect.Width, inflatedRect.Height);
@@ -1026,13 +1549,13 @@ public abstract class ImageAndLabelGeneratorBase
 
         using (SKCanvas charImageCanvas = new SKCanvas(charImage))
         {
-            charImageCanvas.Clear(SKColors.Black);
+            charImageCanvas.Clear(SKColors.White);
             charImageCanvas.DrawBitmap(tempCharImage, drawLocation);
         }
 
 
         // resize
-        SKSizeI size = new SKSizeI(22, 22); // TODO: make size selectable/changeble
+        SKSizeI size = new SKSizeI(32, 32); // TODO: make size selectable/changeable
         SKBitmap scaledCharacterImage = charImage.Resize(size, SKFilterQuality.High);
 
         // save to file
@@ -1047,15 +1570,23 @@ public abstract class ImageAndLabelGeneratorBase
         string characterClass = CharacterClassDictionary.CharacterClasses[character.Symbol];
 
 
-        string saveDirectoryPath = System.IO.Path.Combine(baseSavePath, characterClass);
+        string saveDirectoryPath = Path.Combine(baseSavePath, characterClass);
 
         // create folder if not exists
         if (!Directory.Exists(saveDirectoryPath))
         {
             Directory.CreateDirectory(saveDirectoryPath);
         }
+        
 
-        string fullPath = System.IO.Path.Combine(saveDirectoryPath, $"{Guid.NewGuid()}.png");
+        // maximum number of image files to save for each character/class
+        if (Directory.GetFiles(saveDirectoryPath).Length >= characterImageFileClassLimit)
+        {
+            return;
+        }
+
+
+        string fullPath = Path.Combine(saveDirectoryPath, $"{Guid.NewGuid()}.png");
 
         // write file
         using (SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 100))

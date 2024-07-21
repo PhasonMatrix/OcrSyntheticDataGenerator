@@ -28,7 +28,7 @@ public class CreateFilesViewModel: ViewModelBase
     private int _pageImageHeight;
     private string _comboBoxSaveDataFileType = "None";
     private string _comboBoxTextLayoutType = "Scattered Text";
-    private string _comboBoxCharacterBoxNormalisationType = "Stretch";
+    private string _comboBoxCharacterBoxNormalisationType = "Include surrounding pixels";
     private bool _checkBoxOutputPageImageFiles = true;
     private bool _checkBoxOutputCharacterImageFiles;
     private double _progressBarValue;
@@ -222,7 +222,7 @@ public class CreateFilesViewModel: ViewModelBase
         generator.BlurProbability = _blurProbability;
         generator.PixelateProbability = _pixelateProbability;
         generator.InvertProbability = _invertImageProbability;
-        generator.Generate();
+        generator.GenerationPipeline(true);
 
 
 
