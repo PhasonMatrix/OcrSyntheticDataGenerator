@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+﻿using Avalonia.Controls;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -78,6 +79,38 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             }
         }
 
+        public static void DrawBackgroundNoise(SKBitmap bitmap)
+        {
+            Random rnd = new Random();
+
+            for (int x = 0; x < bitmap.Width; x++)
+            {
+                for (int y = 0; y < bitmap.Height; y++)
+                {
+                    int pixelProbability = rnd.Next(2, 20);
+                    int pixelPercentage = rnd.Next(1, 100);
+                    if (pixelPercentage < pixelProbability)
+                    {
+                        byte lightness = (byte)(255 - Math.Abs(NextGaussian(0, 2) * 255));
+                        SKColor color = new SKColor(lightness, lightness, lightness);
+                        bitmap.SetPixel(x, y, color);
+                    }
+                }
+            }
+
+            // now blur it
+            float xBlurAmount = rnd.Next(110, 400) / 100;
+            float yBlurAmount = rnd.Next(110, 400) / 100;
+            using (SKCanvas canvas = new SKCanvas(bitmap))
+            using (SKPaint paint = new SKPaint())
+            {
+                paint.ImageFilter = SKImageFilter.CreateBlur(xBlurAmount, yBlurAmount);
+                canvas.DrawBitmap(bitmap, 0, 0, paint);
+            }
+            
+
+        }
+
 
         public static void DrawForgroundNoise(SKBitmap bitmap)
         {
@@ -87,7 +120,7 @@ namespace OcrSyntheticDataGenerator.ImageGeneration
             {
                 for (int y = 0; y < bitmap.Height; y++)
                 {
-                    int pixelProbability = 5;
+                    int pixelProbability = rnd.Next(1, 4);
                     int pixelPercentage = rnd.Next(1, 100);
                     if (pixelPercentage < pixelProbability)
                     {

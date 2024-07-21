@@ -20,7 +20,7 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
     public override void GenerateContent()
     {
         int minFontHeight = 16;
-        int maxFontHeight = 400;
+        int maxFontHeight = 300;
 
         // create some lines
         int numberOfHorizontalLines = _rnd.Next(1, 4);
@@ -201,13 +201,13 @@ public class ScatteredTextGenerator : ImageAndLabelGeneratorBase
                     DrawTextBlockBackgroundColour(textCanvas, isInverted, isLightText, isBoxAroundText, phrase.BackgroundRect);
 
 
-                    SKColor textColor = new SKColor(255, 255, 255, (byte)_rnd.Next(175, 255)); // light text
+                    SKColor textColor = new SKColor(255, 255, 255, (byte)_rnd.Next(60, 255)); // light text
 
                     // draw the text on the image
 
                     if (!isInverted)  // dark text on light/no background
                     {
-                        byte alpha = (byte)_rnd.Next(100, 255);
+                        byte alpha = (byte)_rnd.Next(60, 255);
                         if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
                         {
                             alpha = (byte)_rnd.Next(200, 255);

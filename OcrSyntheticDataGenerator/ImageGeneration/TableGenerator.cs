@@ -249,22 +249,17 @@ public class TableGenerator : ImageAndLabelGeneratorBase
         {
             //textCanvas.Clear(SKColors.White);
 
-            byte textDarkness = (byte)_rnd.Next(120, 255);
-            if (_backgroundColour.Alpha < 90) // make it lighter if the background is light
-            {
-                textDarkness = (byte)_rnd.Next(200, 255);
-                // clamp to less than 256
-                if (textDarkness > 255) { textDarkness = 255; }
-            }
+            byte textDarkness = (byte)_rnd.Next(60, 255);
+ 
 
             if (HasBackgroundTexture)
             {
                 // clamp the darkness. we don't want the text to be too light on a dark background
-                if (textDarkness < 200) { textDarkness = 255; }
+                textDarkness = (byte)_rnd.Next(200, 255);
             }
 
             SKColor textColor = new SKColor(0x00, 0x00, 0x00, textDarkness);
-            byte lineDarkness = (byte)_rnd.Next(0, 150);
+            byte lineDarkness = (byte)_rnd.Next(0, 250);
             SKColor lineColor = new SKColor(lineDarkness, lineDarkness, lineDarkness);
             byte stripedRowBackgroundAlpha = (byte)_rnd.Next(5, 80);
             SKColor stripeColor = new SKColor(0x00, 0x00, 0x00, stripedRowBackgroundAlpha);

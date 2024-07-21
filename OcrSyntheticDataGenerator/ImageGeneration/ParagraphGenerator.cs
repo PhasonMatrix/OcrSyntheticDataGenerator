@@ -126,7 +126,7 @@ internal class ParagraphGenerator : ImageAndLabelGeneratorBase
         {
             //textCanvas.Clear(SKColors.White);
 
-            byte alpha = (byte)_rnd.Next(120, 255);
+            byte alpha = (byte)_rnd.Next(100, 255);
 
             if (HasBackgroundTexture)
             {

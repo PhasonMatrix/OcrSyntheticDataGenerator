@@ -113,11 +113,22 @@ public abstract class ImageAndLabelGeneratorBase
     {
         int backgroundImagePercentage = _rnd.Next(1, 100);
         HasBackgroundTexture = backgroundImagePercentage <= BackgroundProbability;
-
+        
 
         using (SKCanvas textCanvas = new SKCanvas(TextImage))
         {
             textCanvas.Clear(SKColors.White);
+        }
+
+
+
+
+        // draw background noise 
+        int noisePercentage = _rnd.Next(1, 100);
+
+        if (noisePercentage <= NoiseProbability)
+        {
+            ImageProcessing.DrawBackgroundNoise(TextImage);
         }
 
         if (HasBackgroundTexture)
